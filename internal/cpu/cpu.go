@@ -108,6 +108,8 @@ func (c *SM83) Reset() {
 	c.memory.AddMMIOByte(&c.interruptFlag, 0xFF0F)
 	c.memory.AddMMIOByte(&c.Sound.NR11, 0xFF11)
 	c.memory.AddMMIOByte(&c.Sound.NR12, 0xFF12)
+	c.memory.AddMMIOByte(&c.Sound.NR13, 0xFF13)
+	c.memory.AddMMIOByte(&c.Sound.NR14, 0xFF14)
 	c.memory.AddMMIOByte(&c.Sound.NR50, 0xFF24)
 	c.memory.AddMMIOByte(&c.Sound.NR51, 0xFF25)
 	c.memory.AddMMIOByte(&c.Sound.NR52, 0xFF26)
