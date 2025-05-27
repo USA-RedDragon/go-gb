@@ -3,6 +3,7 @@ package cpu
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/USA-RedDragon/go-gb/internal/cartridge"
@@ -74,7 +75,23 @@ func (c *SM83) Reset() {
 	c.serialControl = 0
 
 	c.memory = memory.MMIO{}
-	c.memory.AddMMIO(c.cartridge.ROMBank0[:], 0x0, consts.ROMBankSize)
+
+	if c.config.BIOS != "" {
+		biosData, err := os.ReadFile(c.config.BIOS)
+		if err != nil {
+			slog.Error("Failed to load BIOS", "error", err)
+			os.Exit(1)
+		}
+		if len(biosData) != consts.BIOSSize {
+			slog.Error("Invalid BIOS size", "expected", consts.BIOSSize, "got", len(biosData))
+			os.Exit(1)
+		}
+		// We need to add the BIOS to the memory map at 0x0000, and only add cartridge ROM banks after that
+		c.memory.AddMMIO(biosData, 0x0000, consts.BIOSSize)
+		c.memory.AddMMIO(c.cartridge.ROMBank0[consts.BIOSSize:], 0x0100, consts.ROMBankSize-consts.BIOSSize)
+	} else {
+		c.memory.AddMMIO(c.cartridge.ROMBank0[:], 0x0, consts.ROMBankSize)
+	}
 	if len(c.cartridge.AdditionalROMBanks) > 0 {
 		c.memory.AddMMIO(c.cartridge.AdditionalROMBanks[0][:], 0x4000, consts.ROMBankSize)
 	}
@@ -106,7 +123,11 @@ func (c *SM83) Reset() {
 	c.r_E = 0
 	c.r_H = 0
 	c.r_L = 0
-	c.r_PC = 0x0100 // Program Counter starts at 0x0100
+	if c.config.BIOS != "" {
+		c.r_PC = 0x0
+	} else {
+		c.r_PC = 0x0100 // Program Counter starts at 0x0100
+	}
 	c.r_SP = 0
 	c.halted = false
 	c.exit = false
