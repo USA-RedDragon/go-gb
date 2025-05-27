@@ -105,19 +105,16 @@ func (c *SM83) GetTitle() string {
 	return string(str)
 }
 
-func (c *SM83) Step() {
+func (c *SM83) Step() int {
 	if !c.halted {
-		c.step()
+		instruction := c.fetch()
+
+		slog.Debug("Instruction", "instruction", fmt.Sprintf("0x%02X", instruction))
+		slog.Debug(c.DebugRegisters())
+
+		return c.execute(instruction)
 	}
-}
-
-func (c *SM83) step() {
-	instruction := c.fetch()
-
-	slog.Debug("Instruction", "instruction", fmt.Sprintf("0x%02X", instruction))
-	slog.Debug(c.DebugRegisters())
-
-	c.execute(instruction)
+	return 1
 }
 
 func (c *SM83) fetch() byte {
@@ -159,20 +156,46 @@ func (c *SM83) DebugRegisters() string {
 	ret += fmt.Sprintf(" B: 0x%02X\t  C: 0x%02X\n", c.r_B, c.r_C)
 	ret += fmt.Sprintf(" D: 0x%02X\t  E: 0x%02X\n", c.r_D, c.r_E)
 	ret += fmt.Sprintf(" H: 0x%02X\t  L: 0x%02X\n", c.r_H, c.r_L)
-	ret += fmt.Sprintf("PC: 0x%04X\n", c.r_PC)
-	ret += fmt.Sprintf("SP: 0x%04X\n", c.r_SP)
+	ret += fmt.Sprintf("PC: 0x%04X\t SP: 0x%04X\n", c.r_PC, c.r_SP)
+	ret += fmt.Sprintf("Flags: C: %t, H: %t, N: %t, Z: %t\n",
+		c.GetFlag(CarryFlag),
+		c.GetFlag(HalfCarryFlag),
+		c.GetFlag(NegativeFlag),
+		c.GetFlag(ZeroFlag),
+	)
 
 	return ret
 }
 
 func (c *SM83) Run() {
-	cycleTime := time.Second / 4194304
-	prevTime := time.Now()
+	cycleTime := time.Second / 4194304 / 4 // 4.194304 MHz, divided by 4 (1.048576 MHz) to count machine cycles
+	time.Sleep(cycleTime)                  // Simulate the initial delay from reading the first instruction
 	for !c.exit {
-		c.Step()
-		time.Sleep(cycleTime - time.Since(prevTime))
-		prevTime = time.Now()
+		prevTime := time.Now()
+		cycles := c.Step()
+		time.Sleep(cycleTime*time.Duration(cycles) - time.Since(prevTime))
 	}
+}
+
+type Flag uint8
+
+const (
+	CarryFlag     Flag = 1 << 4
+	HalfCarryFlag Flag = 1 << 5
+	NegativeFlag  Flag = 1 << 6
+	ZeroFlag      Flag = 1 << 7
+)
+
+func (c *SM83) SetFlag(flag Flag, val bool) {
+	if val {
+		c.r_F |= byte(flag)
+	} else {
+		c.r_F &^= byte(flag)
+	}
+}
+
+func (c *SM83) GetFlag(flag Flag) bool {
+	return c.r_F&byte(flag) != 0
 }
 
 func (c *SM83) Halt() {
