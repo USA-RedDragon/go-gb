@@ -47,20 +47,14 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 	case 0x00: // NOP
 		cycles += 1
 	case 0x04: // INC B
-		// Increment B and set flags accordingly
-		c.r_B++
-		slog.Debug("Executing INC B", "value", fmt.Sprintf("0x%02X", c.r_B))
-		c.SetFlag(ZeroFlag, c.r_B == 0)
-		c.SetFlag(NegativeFlag, false)
-		c.SetFlag(HalfCarryFlag, (c.r_B&0x0F) == 0)
+		c.incRegister(&c.r_B)
 		cycles += 1
+		slog.Debug("Executing INC B", "value", fmt.Sprintf("0x%02X", c.r_B))
 	case 0x05: // DEC B
 		// Decrement B and set flags accordingly
-		c.r_B--
+		c.decRegister(&c.r_B)
+		cycles += 1
 		slog.Debug("Executing DEC B", "value", fmt.Sprintf("0x%02X", c.r_B))
-		c.SetFlag(ZeroFlag, c.r_B == 0)
-		c.SetFlag(NegativeFlag, true)
-		c.SetFlag(HalfCarryFlag, (c.r_B&0x0F) == 0x0F)
 	case 0x06: // LD B,n
 		// Load the next byte as an immediate value into B
 		breg, err := c.memory.Read8(c.r_PC)
@@ -72,21 +66,13 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		c.r_PC++
 		cycles += 2
 	case 0x0C: // INC C
-		// Increment C and set flags accordingly
-		c.r_C++
+		c.incRegister(&c.r_C)
+		cycles += 1
 		slog.Debug("Executing INC C", "value", fmt.Sprintf("0x%02X", c.r_C))
-		c.SetFlag(ZeroFlag, c.r_C == 0)
-		c.SetFlag(NegativeFlag, false)
-		c.SetFlag(HalfCarryFlag, (c.r_C&0x0F) == 0)
-		cycles += 1
 	case 0x0d: // DEC C
-		// Decrement C and set flags accordingly
-		c.r_C--
-		slog.Debug("Executing DEC C", "value", fmt.Sprintf("0x%02X", c.r_C))
-		c.SetFlag(ZeroFlag, c.r_C == 0)
-		c.SetFlag(NegativeFlag, true)
-		c.SetFlag(HalfCarryFlag, (c.r_C&0x0F) == 0x0F)
+		c.decRegister(&c.r_C)
 		cycles += 1
+		slog.Debug("Executing DEC C", "value", fmt.Sprintf("0x%02X", c.r_C))
 	case 0x0e: // LD C,n
 		// Load the next byte as an immediate value into C
 		creg, err := c.memory.Read8(c.r_PC)
@@ -116,6 +102,10 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		}
 		slog.Debug("Executing INC DE", "DE", fmt.Sprintf("0x%04X", uint16(c.r_D)<<8|uint16(c.r_E)))
 		cycles += 2
+	case 0x15: // DEC D
+		c.decRegister(&c.r_D)
+		cycles += 1
+		slog.Debug("Executing DEC D", "value", fmt.Sprintf("0x%02X", c.r_D))
 	case 0x17: // RLA
 		// Rotate A left
 		topBit := c.r_A & 0x80 // Get the top bit (7th bit) of A
@@ -152,6 +142,10 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		slog.Debug("Loaded A from (DE)", "value", fmt.Sprintf("0x%02X", areg))
 		c.r_A = areg
 		cycles += 2
+	case 0x1D: // DEC E
+		c.decRegister(&c.r_E)
+		cycles += 1
+		slog.Debug("Executing DEC E", "value", fmt.Sprintf("0x%02X", c.r_E))
 	case 0x1E: // LD E,n
 		// Load the next byte as an immediate value into E
 		ereg, err := c.memory.Read8(c.r_PC)
@@ -211,6 +205,10 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		}
 		slog.Debug("Executing INC HL", "HL", fmt.Sprintf("0x%04X", uint16(c.r_H)<<8|uint16(c.r_L)))
 		cycles += 1
+	case 0x24: // INC H
+		c.incRegister(&c.r_H)
+		cycles += 1
+		slog.Debug("Executing INC H", "value", fmt.Sprintf("0x%02X", c.r_H))
 	case 0x28: // JR Z,nn
 		// Read the next byte as a signed offset
 		offset, err := c.memory.Read8(c.r_PC)
@@ -262,13 +260,9 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		}
 		cycles += 2
 	case 0x3D: // DEC A
-		// Decrement A and set flags accordingly
-		c.r_A--
-		slog.Debug("Executing DEC A", "value", fmt.Sprintf("0x%02X", c.r_A))
-		c.SetFlag(ZeroFlag, c.r_A == 0)
-		c.SetFlag(NegativeFlag, true)
-		c.SetFlag(HalfCarryFlag, (c.r_A&0x0F) == 0x0F)
+		c.decRegister(&c.r_A)
 		cycles += 1
+		slog.Debug("Executing DEC A", "value", fmt.Sprintf("0x%02X", c.r_A))
 	case 0x3E: // LD A,n
 		// Load the next byte as an immediate value into A
 		areg, err := c.memory.Read8(c.r_PC)
