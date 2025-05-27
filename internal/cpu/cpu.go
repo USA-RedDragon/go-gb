@@ -11,12 +11,14 @@ import (
 	"github.com/USA-RedDragon/go-gb/internal/consts"
 	"github.com/USA-RedDragon/go-gb/internal/memory"
 	"github.com/USA-RedDragon/go-gb/internal/ppu"
+	"github.com/USA-RedDragon/go-gb/internal/sound"
 )
 
 type SM83 struct {
 	config    *config.Config
 	memory    memory.MMIO // Memory-mapped I/O
 	PPU       *ppu.PPU
+	Sound     *sound.Sound
 	cartridge *cartridge.Cartridge
 
 	halted bool
@@ -55,6 +57,7 @@ func NewSM83(config *config.Config, cartridge *cartridge.Cartridge) *SM83 {
 		memory:    memory.MMIO{},
 		cartridge: cartridge,
 		PPU:       ppu.NewPPU(),
+		Sound:     sound.NewSound(),
 	}
 
 	cpu.Reset()
@@ -103,6 +106,11 @@ func (c *SM83) Reset() {
 	c.memory.AddMMIOByte(&c.serialData, 0xFF01)
 	c.memory.AddMMIOByte(&c.serialControl, 0xFF02)
 	c.memory.AddMMIOByte(&c.interruptFlag, 0xFF0F)
+	c.memory.AddMMIOByte(&c.Sound.NR11, 0xFF11)
+	c.memory.AddMMIOByte(&c.Sound.NR12, 0xFF12)
+	c.memory.AddMMIOByte(&c.Sound.NR50, 0xFF24)
+	c.memory.AddMMIOByte(&c.Sound.NR51, 0xFF25)
+	c.memory.AddMMIOByte(&c.Sound.NR52, 0xFF26)
 	c.memory.AddMMIOByte(&c.PPU.LCDControl, 0xFF40)
 	c.memory.AddMMIOByte(&c.PPU.LCDStatus, 0xFF41)
 	c.memory.AddMMIOByte(&c.PPU.SCY, 0xFF42)
