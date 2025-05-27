@@ -10,6 +10,7 @@ type PPU struct {
 	SCY        byte                  // SCY, scroll Y register
 	LY         byte                  // LY, LCD Y coordinate register, read-only
 	LYC        byte                  // LYC, LY Compare register
+	BGP        byte                  // BGP, background palette data
 }
 
 func NewPPU() *PPU {
@@ -26,4 +27,5 @@ func (ppu *PPU) Reset() {
 	ppu.SCY = 0x00
 	ppu.LY = 0x00
 	ppu.LYC = 0x00
+	ppu.BGP = 0x00
 }

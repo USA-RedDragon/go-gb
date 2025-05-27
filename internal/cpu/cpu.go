@@ -117,6 +117,7 @@ func (c *SM83) Reset() {
 	c.memory.AddMMIOByte(&c.PPU.SCX, 0xFF43)
 	c.memory.AddMMIOByte(&c.PPU.LY, 0xFF44)
 	c.memory.AddMMIOByte(&c.PPU.LYC, 0xFF45)
+	c.memory.AddMMIOByte(&c.PPU.BGP, 0xFF47)
 	c.memory.AddMMIO(c.HRAM[:], 0xFF80, consts.HRAMSize)
 	c.memory.AddMMIOByte(&c.interruptEnable, 0xFFFF)
 
