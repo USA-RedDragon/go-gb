@@ -5,6 +5,7 @@ import (
 	"os"
 	"runtime/pprof"
 
+	"github.com/USA-RedDragon/go-gb/internal/cartridge"
 	"github.com/USA-RedDragon/go-gb/internal/config"
 	"github.com/USA-RedDragon/go-gb/internal/cpu"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -18,10 +19,10 @@ type Emulator struct {
 	frametime int
 }
 
-func New(config *config.Config) *Emulator {
+func New(config *config.Config, cartridge *cartridge.Cartridge) *Emulator {
 	emu := &Emulator{
 		config: config,
-		cpu:    cpu.NewSM83(config),
+		cpu:    cpu.NewSM83(config, cartridge),
 	}
 	return emu
 }

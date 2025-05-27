@@ -7,6 +7,7 @@ import (
 	"os/signal"
 
 	"github.com/USA-RedDragon/configulator"
+	"github.com/USA-RedDragon/go-gb/internal/cartridge"
 	"github.com/USA-RedDragon/go-gb/internal/config"
 	"github.com/USA-RedDragon/go-gb/internal/cpu"
 	"github.com/lmittmann/tint"
@@ -55,7 +56,12 @@ func runCPU(cmd *cobra.Command, _ []string) error {
 	}
 	slog.SetDefault(logger)
 
-	cpu := cpu.NewSM83(cfg)
+	cartridge, err := cartridge.NewCartridge(cfg.ROM)
+	if err != nil {
+		return fmt.Errorf("failed to load cartridge: %w", err)
+	}
+
+	cpu := cpu.NewSM83(cfg, cartridge)
 	go func() {
 		ch := make(chan os.Signal, 1)
 		signal.Notify(ch, os.Interrupt)

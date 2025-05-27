@@ -4,6 +4,7 @@ import "errors"
 
 var (
 	ErrInvalidLogLevel = errors.New("invalid log level provided")
+	ErrROMNotProvided  = errors.New("ROM file path must be provided")
 )
 
 func (c Config) Validate() error {
@@ -12,6 +13,10 @@ func (c Config) Validate() error {
 		c.LogLevel != LogLevelWarn &&
 		c.LogLevel != LogLevelError {
 		return ErrInvalidLogLevel
+	}
+
+	if c.ROM == "" {
+		return ErrROMNotProvided
 	}
 
 	return nil

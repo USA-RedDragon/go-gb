@@ -6,9 +6,9 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 
 	"github.com/USA-RedDragon/configulator"
+	"github.com/USA-RedDragon/go-gb/internal/cartridge"
 	"github.com/USA-RedDragon/go-gb/internal/config"
 	"github.com/USA-RedDragon/go-gb/internal/emulator"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -60,7 +60,12 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 	}
 	slog.SetDefault(logger)
 
-	emu := emulator.New(cfg)
+	cartridge, err := cartridge.NewCartridge(cfg.ROM)
+	if err != nil {
+		return fmt.Errorf("failed to load cartridge: %w", err)
+	}
+
+	emu := emulator.New(cfg, cartridge)
 	go func() {
 		ch := make(chan os.Signal, 1)
 		signal.Notify(ch, os.Interrupt)
@@ -74,11 +79,10 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetFullscreen(cfg.Fullscreen)
 	ebiten.SetScreenClearedEveryFrame(true)
-	if cfg.ROM != "" {
-		name := strings.TrimSuffix(filepath.Base(cfg.ROM), filepath.Ext(cfg.ROM))
-		ebiten.SetWindowTitle(name + " | go-gb")
+	if cartridge.Title != "" {
+		ebiten.SetWindowTitle(fmt.Sprintf("%s (v%d) - %s [%s] | go-gb", cartridge.Title, cartridge.Version, cartridge.Publisher, cartridge.CartridgeType))
 	} else {
-		ebiten.SetWindowTitle("go-gb")
+		ebiten.SetWindowTitle(fmt.Sprintf("%s [%s] | go-gb", filepath.Base(cfg.ROM), cartridge.CartridgeType))
 	}
 
 	return ebiten.RunGame(emu)

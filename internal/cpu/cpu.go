@@ -3,34 +3,25 @@ package cpu
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"time"
 
+	"github.com/USA-RedDragon/go-gb/internal/cartridge"
 	"github.com/USA-RedDragon/go-gb/internal/config"
+	"github.com/USA-RedDragon/go-gb/internal/consts"
 	"github.com/USA-RedDragon/go-gb/internal/memory"
 )
 
-const (
-	ROMBankSize          = 16384 // 16KB ROM bank size
-	VRAMSize             = 8192  // 8KB of VRAM
-	CartridgeRAMBankSize = 8192  // 8KB of cartridge RAM bank
-	RAMSize              = 8192  // 8KB of RAM
-	HRAMSize             = 127   // 127 bytes of HRAM (0xFF80 - 0xFFFE)
-)
-
 type SM83 struct {
-	config *config.Config
-	memory memory.MMIO // Memory-mapped I/O
+	config    *config.Config
+	memory    memory.MMIO // Memory-mapped I/O
+	cartridge *cartridge.Cartridge
 
 	halted bool
 	exit   bool
 
-	ROMBank0          [ROMBankSize]byte          // 16KB of ROM bank 0
-	ROMSwitchableBank [ROMBankSize]byte          // 16KB of ROM, can be expanded for more banks
-	VRAM              [VRAMSize]byte             // 8KB of VRAM
-	CartridgeRAM      [CartridgeRAMBankSize]byte // 8KB of cartridge RAM, if present
-	RAM               [RAMSize]byte              // 8KB of RAM
-	HRAM              [HRAMSize]byte             // 127 bytes of HRAM
+	VRAM [consts.VRAMSize]byte // 8KB of VRAM
+	RAM  [consts.RAMSize]byte  // 8KB of RAM
+	HRAM [consts.HRAMSize]byte // 127 bytes of HRAM
 
 	ime             bool // Interrupt Master Enable flag
 	interruptFlag   byte // Interrupt Flag register, used to check which interrupts are pending
@@ -61,28 +52,25 @@ type SM83 struct {
 	r_SP uint16 // SP (Stack Pointer)
 }
 
-func NewSM83(config *config.Config) *SM83 {
+func NewSM83(config *config.Config, cartridge *cartridge.Cartridge) *SM83 {
 	cpu := &SM83{
-		config: config,
-		memory: memory.MMIO{},
+		config:    config,
+		memory:    memory.MMIO{},
+		cartridge: cartridge,
 	}
 
 	cpu.Reset()
 
-	if config.ROM != "" {
-		cpu.loadROM()
-	}
+	slog.Debug("ROM loaded", "rom", cartridge)
 
 	return cpu
 }
 
 func (c *SM83) Reset() {
-	c.RAM = [RAMSize]byte{}
-	c.ROMBank0 = [ROMBankSize]byte{}
-	c.ROMSwitchableBank = [ROMBankSize]byte{}
-	c.VRAM = [VRAMSize]byte{}
-	c.CartridgeRAM = [CartridgeRAMBankSize]byte{}
-	c.HRAM = [HRAMSize]byte{}
+	c.RAM = [consts.RAMSize]byte{}
+	c.VRAM = [consts.VRAMSize]byte{}
+	c.cartridge.Reset()
+	c.HRAM = [consts.HRAMSize]byte{}
 	c.interruptFlag = 0
 	c.interruptEnable = 0
 	c.scX = 0
@@ -94,11 +82,15 @@ func (c *SM83) Reset() {
 	c.lcdY = 0
 
 	c.memory = memory.MMIO{}
-	c.memory.AddMMIO(c.ROMBank0[:], 0x0, ROMBankSize)
-	c.memory.AddMMIO(c.ROMSwitchableBank[:], 0x4000, ROMBankSize)
-	c.memory.AddMMIO(c.VRAM[:], 0x8000, VRAMSize)
-	c.memory.AddMMIO(c.CartridgeRAM[:], 0xA000, CartridgeRAMBankSize)
-	c.memory.AddMMIO(c.RAM[:], 0xC000, RAMSize)
+	c.memory.AddMMIO(c.cartridge.ROMBank0[:], 0x0, consts.ROMBankSize)
+	if len(c.cartridge.AdditionalROMBanks) > 0 {
+		c.memory.AddMMIO(c.cartridge.AdditionalROMBanks[0][:], 0x4000, consts.ROMBankSize)
+	}
+	c.memory.AddMMIO(c.VRAM[:], 0x8000, consts.VRAMSize)
+	if c.cartridge.RAMSize.Bytes() > 0 {
+		c.memory.AddMMIO(c.cartridge.CartridgeRAMBanks[0][:], 0xA000, consts.CartridgeRAMBankSize)
+	}
+	c.memory.AddMMIO(c.RAM[:], 0xC000, consts.RAMSize)
 	c.memory.AddMMIOByte(&c.serialData, 0xFF01)
 	c.memory.AddMMIOByte(&c.serialControl, 0xFF02)
 	c.memory.AddMMIOByte(&c.interruptFlag, 0xFF0F)
@@ -107,7 +99,7 @@ func (c *SM83) Reset() {
 	c.memory.AddMMIOByte(&c.scY, 0xFF42)
 	c.memory.AddMMIOByte(&c.scX, 0xFF43)
 	c.memory.AddMMIOByte(&c.lcdY, 0xFF44)
-	c.memory.AddMMIO(c.HRAM[:], 0xFF80, HRAMSize)
+	c.memory.AddMMIO(c.HRAM[:], 0xFF80, consts.HRAMSize)
 	c.memory.AddMMIOByte(&c.interruptEnable, 0xFFFF)
 
 	c.ime = false
@@ -125,21 +117,6 @@ func (c *SM83) Reset() {
 	c.r_SP = 0
 	c.halted = false
 	c.exit = false
-}
-
-func (c *SM83) GetTitle() string {
-	str := []byte{}
-	for i := 0x134; i < 0x144; i++ {
-		mem, err := c.memory.Read8(uint16(i))
-		if err != nil {
-			panic(fmt.Sprintf("Failed to read memory at 0x%04X: %v", i, err))
-		}
-		if mem == 0 {
-			break
-		}
-		str = append(str, mem)
-	}
-	return string(str)
 }
 
 func (c *SM83) Step() int {
@@ -163,28 +140,6 @@ func (c *SM83) fetch() byte {
 	}
 	c.r_PC++
 	return instruction
-}
-
-func (c *SM83) loadROM() {
-	rom, err := os.ReadFile(c.config.ROM)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to load rom: %v", err))
-	}
-	switch len(rom) {
-	case 0:
-		panic("ROM file is empty")
-	case ROMBankSize:
-		slog.Debug("Loaded ROM bank 0", "size", len(rom))
-		copy(c.ROMBank0[:], rom)
-	case ROMBankSize * 2:
-		slog.Debug("Loaded ROM bank 0 and switchable bank", "size", len(rom))
-		copy(c.ROMBank0[:], rom[:ROMBankSize])
-		copy(c.ROMSwitchableBank[:], rom[ROMBankSize:])
-	default:
-		panic(fmt.Sprintf("ROM size is %d bytes, expected 16KB or 32KB", len(rom)))
-	}
-
-	slog.Debug("ROM loaded", "size", len(rom), "title", c.GetTitle())
 }
 
 func (c *SM83) DebugRegisters() string {

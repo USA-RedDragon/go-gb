@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/USA-RedDragon/configulator"
+	"github.com/USA-RedDragon/go-gb/internal/cartridge"
 	"github.com/USA-RedDragon/go-gb/internal/config"
 	"github.com/USA-RedDragon/go-gb/internal/cpu"
 	"github.com/lmittmann/tint"
@@ -54,7 +55,12 @@ func runInteractive(cmd *cobra.Command, _ []string) error {
 	}
 	slog.SetDefault(logger)
 
-	cpu := cpu.NewSM83(cfg)
+	cartridge, err := cartridge.NewCartridge(cfg.ROM)
+	if err != nil {
+		return fmt.Errorf("failed to load cartridge: %w", err)
+	}
+
+	cpu := cpu.NewSM83(cfg, cartridge)
 	// Wait for the user to hit Enter, run the CPU step and repeat until control-C is pressed
 	fmt.Println("Interactive mode started. Press Enter to step through the CPU instructions. Type exit or quit to exit.")
 	for {
