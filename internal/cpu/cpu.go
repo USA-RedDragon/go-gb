@@ -41,6 +41,7 @@ type SM83 struct {
 	lcdControl      byte // LCDC, LCD control register
 	serialData      byte // SB, serial data register
 	serialControl   byte // SC, serial control register
+	lcdY            byte // LY, LCD Y coordinate register
 
 	// Registers
 	r_IR byte // IR, instruction register
@@ -90,6 +91,7 @@ func (c *SM83) Reset() {
 	c.serialData = 0
 	c.serialControl = 0
 	c.lcdControl = 0
+	c.lcdY = 0
 
 	c.memory = memory.MMIO{}
 	c.memory.AddMMIO(c.ROMBank0[:], 0x0, ROMBankSize)
@@ -104,6 +106,7 @@ func (c *SM83) Reset() {
 	c.memory.AddMMIOByte(&c.lcdStatus, 0xFF41)
 	c.memory.AddMMIOByte(&c.scY, 0xFF42)
 	c.memory.AddMMIOByte(&c.scX, 0xFF43)
+	c.memory.AddMMIOByte(&c.lcdY, 0xFF44)
 	c.memory.AddMMIO(c.HRAM[:], 0xFF80, HRAMSize)
 	c.memory.AddMMIOByte(&c.interruptEnable, 0xFFFF)
 
