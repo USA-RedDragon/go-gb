@@ -150,6 +150,10 @@ func (c *SM83) Step() int {
 		slog.Debug("Instruction", "instruction", fmt.Sprintf("0x%02X", instruction))
 		slog.Debug(c.DebugRegisters())
 
+		for range 4 {
+			c.PPU.Step()
+		}
+
 		return c.execute(instruction)
 	}
 	return 1
@@ -185,11 +189,20 @@ func (c *SM83) DebugRegisters() string {
 
 func (c *SM83) Run() {
 	cycleTime := time.Second / 4194304 / 4 // 4.194304 MHz, divided by 4 (1.048576 MHz) to count machine cycles
-	time.Sleep(cycleTime)                  // Simulate the initial delay from reading the first instruction
+	// 4 steps to match the cpu startup
+	c.PPU.Step()
+	c.PPU.Step()
+	c.PPU.Step()
+	c.PPU.Step()
+	time.Sleep(cycleTime) // Simulate the initial delay from reading the first instruction
 	for !c.exit {
 		prevTime := time.Now()
 		cycles := c.Step()
 		for range cycles {
+			c.PPU.Step()
+			c.PPU.Step()
+			c.PPU.Step()
+			c.PPU.Step()
 			time.Sleep(cycleTime - time.Since(prevTime))
 			prevTime = time.Now()
 		}
