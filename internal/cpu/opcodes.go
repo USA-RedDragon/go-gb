@@ -5,9 +5,54 @@ import (
 	"log/slog"
 )
 
+func (c *SM83) executeCB(instruction byte) (cycles int) {
+	switch instruction {
+	case 0x11: // RL C
+		// Rotate C left. Current carry flag goes to LSB, rotated MSB goes to carry flag.
+		carry := c.GetFlag(CarryFlag)
+		topBit := c.r_C & 0x80 // Get the top bit (7th bit) of C
+		c.r_C = (c.r_C << 1)
+		if carry {
+			c.r_C |= 0x01 // Set LSB if carry was set
+		} else {
+			c.r_C &= 0xFE // Clear LSB if carry was not set
+		}
+		if topBit != 0 {
+			c.SetFlag(CarryFlag, true) // Set carry flag if the top bit was 1
+		} else {
+			c.SetFlag(CarryFlag, false) // Clear carry flag if the top bit was 0
+		}
+
+		c.SetFlag(ZeroFlag, c.r_C == 0)
+		c.SetFlag(NegativeFlag, false)
+		c.SetFlag(HalfCarryFlag, false)
+
+		slog.Debug("Executing RL C", "C", fmt.Sprintf("0x%02X", c.r_C))
+		cycles += 2
+	case 0x7C: // BIT 7,H
+		// Check if the 7th bit of H is set
+		c.SetFlag(ZeroFlag, (c.r_H&0x80) == 0)
+		c.SetFlag(NegativeFlag, false)
+		c.SetFlag(HalfCarryFlag, true)
+		slog.Debug("Executing BIT 7,H", "H", fmt.Sprintf("0x%02X", c.r_H))
+		cycles += 2
+	default:
+		panic("Unknown CB-prefixed instruction: " + fmt.Sprintf("0x%02X", instruction))
+	}
+	return
+}
+
 func (c *SM83) execute(instruction byte) (cycles int) {
 	switch instruction {
 	case 0x00: // NOP
+		cycles += 1
+	case 0x04: // INC B
+		// Increment B and set flags accordingly
+		c.r_B++
+		slog.Debug("Executing INC B", "value", fmt.Sprintf("0x%02X", c.r_B))
+		c.SetFlag(ZeroFlag, c.r_B == 0)
+		c.SetFlag(NegativeFlag, false)
+		c.SetFlag(HalfCarryFlag, (c.r_B&0x0F) == 0)
 		cycles += 1
 	case 0x05: // DEC B
 		// Decrement B and set flags accordingly
@@ -26,6 +71,14 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		c.r_B = breg
 		c.r_PC++
 		cycles += 2
+	case 0x0C: // INC C
+		// Increment C and set flags accordingly
+		c.r_C++
+		slog.Debug("Executing INC C", "value", fmt.Sprintf("0x%02X", c.r_C))
+		c.SetFlag(ZeroFlag, c.r_C == 0)
+		c.SetFlag(NegativeFlag, false)
+		c.SetFlag(HalfCarryFlag, (c.r_C&0x0F) == 0)
+		cycles += 1
 	case 0x0d: // DEC C
 		// Decrement C and set flags accordingly
 		c.r_C--
@@ -42,6 +95,71 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		}
 		slog.Debug("Executing LD C,n", "value", fmt.Sprintf("0x%02X", creg))
 		c.r_C = creg
+		c.r_PC++
+		cycles += 2
+	case 0x11: // LD DE,nn
+		// Load the next two bytes as a 16-bit value into DE
+		de, err := c.memory.Read16(c.r_PC)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read DE value: %v", err))
+		}
+		slog.Debug("Executing LD DE,nn", "value", fmt.Sprintf("0x%04X", de))
+		c.r_D = byte(de >> 8)
+		c.r_E = byte(de & 0xFF)
+		c.r_PC += 2
+		cycles += 3
+	case 0x13: // INC DE
+		// Increment DE
+		c.r_E++
+		if c.r_E == 0x00 {
+			c.r_D++ // Increment D if E wraps around
+		}
+		slog.Debug("Executing INC DE", "DE", fmt.Sprintf("0x%04X", uint16(c.r_D)<<8|uint16(c.r_E)))
+		cycles += 2
+	case 0x17: // RLA
+		// Rotate A left
+		topBit := c.r_A & 0x80 // Get the top bit (7th bit) of A
+		c.r_A = (c.r_A << 1)
+		if topBit != 0 {
+			c.SetFlag(CarryFlag, true) // Set carry flag if the top bit was 1
+		} else {
+			c.SetFlag(CarryFlag, false) // Clear carry flag if the top bit was 0
+		}
+		c.SetFlag(ZeroFlag, false)
+		c.SetFlag(NegativeFlag, false)
+		c.SetFlag(HalfCarryFlag, false)
+		cycles += 1
+	case 0x18: // JR n
+		// Read the next byte as a signed offset
+		offset, err := c.memory.Read8(c.r_PC)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read offset for JR: %v", err))
+		}
+		c.r_PC++
+		slog.Debug("Executing JR n", "offset", fmt.Sprintf("0x%02X", offset))
+		// Jump to the new location
+		c.r_PC += uint16(int8(offset)) // Sign-extend the offset
+		slog.Debug("Jumping to new PC", "new_PC", fmt.Sprintf("0x%04X", c.r_PC))
+		cycles += 3
+	case 0x1A: // LD A,(DE)
+		// Load the value at address DE into A
+		addr := uint16(c.r_D)<<8 | uint16(c.r_E)
+		slog.Debug("Executing LD A,(DE)", "address", fmt.Sprintf("0x%04X", addr))
+		areg, err := c.memory.Read8(addr)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read A from (DE): %v", err))
+		}
+		slog.Debug("Loaded A from (DE)", "value", fmt.Sprintf("0x%02X", areg))
+		c.r_A = areg
+		cycles += 2
+	case 0x1E: // LD E,n
+		// Load the next byte as an immediate value into E
+		ereg, err := c.memory.Read8(c.r_PC)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read E value: %v", err))
+		}
+		slog.Debug("Executing LD E,n", "value", fmt.Sprintf("0x%02X", ereg))
+		c.r_E = ereg
 		c.r_PC++
 		cycles += 2
 	case 0x20: // JR NZ,nn
@@ -72,6 +190,64 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		c.r_L = byte(hl & 0xFF)
 		c.r_PC += 2
 		cycles += 3
+	case 0x22: // LD (HL+),A
+		// Store the value of A at the address pointed to by HL, then increment HL
+		addr := uint16(c.r_H)<<8 | uint16(c.r_L)
+		slog.Debug("Executing LD (HL+),A", "address", fmt.Sprintf("0x%04X", addr))
+		err := c.memory.Write8(addr, c.r_A)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to write A to (HL+): %v", err))
+		}
+		c.r_L++
+		if c.r_L == 0x00 {
+			c.r_H++ // Increment H if L wraps around
+		}
+		cycles += 2
+	case 0x23: // INC HL
+		// Increment HL
+		c.r_L++
+		if c.r_L == 0x00 {
+			c.r_H++ // Increment H if L wraps around
+		}
+		slog.Debug("Executing INC HL", "HL", fmt.Sprintf("0x%04X", uint16(c.r_H)<<8|uint16(c.r_L)))
+		cycles += 1
+	case 0x28: // JR Z,nn
+		// Read the next byte as a signed offset
+		offset, err := c.memory.Read8(c.r_PC)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read offset for JR Z: %v", err))
+		}
+		c.r_PC++
+		slog.Debug("Executing JR Z,nn", "offset", fmt.Sprintf("0x%02X", offset))
+		if c.GetFlag(ZeroFlag) {
+			// If Z flag is set, jump to the new location
+			c.r_PC += uint16(int8(offset)) // Sign-extend the offset
+			slog.Debug("Jumping to new PC", "new_PC", fmt.Sprintf("0x%04X", c.r_PC))
+			cycles += 3
+		} else {
+			slog.Debug("Not jumping")
+			cycles += 2
+		}
+	case 0x2E: // LD L,n
+		// Load the next byte as an immediate value into L
+		lreg, err := c.memory.Read8(c.r_PC)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read L value: %v", err))
+		}
+		slog.Debug("Executing LD L,n", "value", fmt.Sprintf("0x%02X", lreg))
+		c.r_L = lreg
+		c.r_PC++
+		cycles += 2
+	case 0x31: // LD SP,nn
+		// Load the next two bytes as a 16-bit value into SP
+		sp, err := c.memory.Read16(c.r_PC)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read SP value: %v", err))
+		}
+		slog.Debug("Executing LD SP,nn", "value", fmt.Sprintf("0x%04X", sp))
+		c.r_SP = sp
+		c.r_PC += 2
+		cycles += 3
 	case 0x32: // LD (HL-),A
 		// Store the value of A at the address pointed to by HL, then decrement HL
 		addr := uint16(c.r_H)<<8 | uint16(c.r_L)
@@ -85,6 +261,14 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 			c.r_H-- // Decrement H if L wraps around
 		}
 		cycles += 2
+	case 0x3D: // DEC A
+		// Decrement A and set flags accordingly
+		c.r_A--
+		slog.Debug("Executing DEC A", "value", fmt.Sprintf("0x%02X", c.r_A))
+		c.SetFlag(ZeroFlag, c.r_A == 0)
+		c.SetFlag(NegativeFlag, true)
+		c.SetFlag(HalfCarryFlag, (c.r_A&0x0F) == 0x0F)
+		cycles += 1
 	case 0x3E: // LD A,n
 		// Load the next byte as an immediate value into A
 		areg, err := c.memory.Read8(c.r_PC)
@@ -95,6 +279,59 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		c.r_A = areg
 		c.r_PC++
 		cycles += 2
+	case 0x4F: // LD C,A
+		// Load the value of A into C
+		slog.Debug("Executing LD C,A", "value", fmt.Sprintf("0x%02X", c.r_A))
+		c.r_C = c.r_A
+		cycles += 1
+	case 0x57: // LD D,A
+		// Load the value of A into D
+		slog.Debug("Executing LD D,A", "value", fmt.Sprintf("0x%02X", c.r_A))
+		c.r_D = c.r_A
+		cycles += 1
+	case 0x67: // LD H,A
+		// Load the value of A into H
+		slog.Debug("Executing LD H,A", "value", fmt.Sprintf("0x%02X", c.r_A))
+		c.r_H = c.r_A
+		cycles += 1
+	case 0x77: // LD (HL),A
+		// Store the value of A at the address pointed to by HL
+		addr := uint16(c.r_H)<<8 | uint16(c.r_L)
+		slog.Debug("Executing LD (HL),A", "address", fmt.Sprintf("0x%04X", addr), "value", fmt.Sprintf("0x%02X", c.r_A))
+		err := c.memory.Write8(addr, c.r_A)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to write A to (HL): %v", err))
+		}
+		cycles += 2
+	case 0x7B: // LD A,E
+		// Load the value of E into A
+		slog.Debug("Executing LD A,E", "value", fmt.Sprintf("0x%02X", c.r_E))
+		c.r_A = c.r_E
+		cycles += 1
+	case 0x95: // SUB L
+		// Subtract L from A and set flags
+		slog.Debug("Executing SUB L", "L", fmt.Sprintf("0x%02X", c.r_L))
+		c.SetFlag(ZeroFlag, c.r_A == c.r_L)
+		c.SetFlag(NegativeFlag, true)
+		c.SetFlag(HalfCarryFlag, (c.r_A&0x0F) < (c.r_L&0x0F))
+		c.SetFlag(CarryFlag, c.r_A < c.r_L)
+		c.r_A -= c.r_L
+		cycles += 1
+	case 0x96: // SUB (HL)
+		// Subtract the value at address HL from A and set flags
+		addr := uint16(c.r_H)<<8 | uint16(c.r_L)
+		slog.Debug("Executing SUB (HL)", "address", fmt.Sprintf("0x%04X", addr))
+		hlValue, err := c.memory.Read8(addr)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read value from (HL): %v", err))
+		}
+		slog.Debug("Value at (HL)", "value", fmt.Sprintf("0x%02X", hlValue))
+		c.SetFlag(ZeroFlag, c.r_A == hlValue)
+		c.SetFlag(NegativeFlag, true)
+		c.SetFlag(HalfCarryFlag, (c.r_A&0x0F) < (hlValue&0x0F))
+		c.SetFlag(CarryFlag, c.r_A < hlValue)
+		c.r_A -= hlValue
+		cycles += 2
 	case 0xAF: // XOR A
 		c.r_A = 0
 		c.SetFlag(ZeroFlag, true)
@@ -102,6 +339,18 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		c.SetFlag(HalfCarryFlag, false)
 		c.SetFlag(CarryFlag, false)
 		cycles += 1
+	case 0xC1: // POP BC
+		// Pop the top 16 bits from the stack into BC
+		slog.Debug("Executing POP BC")
+		bc, err := c.memory.Read16(c.r_SP)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read BC from stack: %v", err))
+		}
+		slog.Debug("Popped BC from stack", "value", fmt.Sprintf("0x%04X", bc))
+		c.r_B = byte(bc >> 8)
+		c.r_C = byte(bc & 0xFF)
+		c.r_SP += 2
+		cycles += 3
 	case 0xC3: // JP nn
 		newloc, err := c.memory.Read16(c.r_PC)
 		if err != nil {
@@ -110,6 +359,51 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		slog.Debug("Executing JP nn", "address", fmt.Sprintf("0x%04X", newloc))
 		c.r_PC = newloc
 		cycles += 4
+	case 0xC5: // PUSH BC
+		// Push the current BC register onto the stack
+		bc := uint16(c.r_B)<<8 | uint16(c.r_C)
+		slog.Debug("Executing PUSH BC", "value", fmt.Sprintf("0x%04X", bc))
+		err := c.memory.Write16(c.r_SP-2, bc)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to write BC to stack: %v", err))
+		}
+		c.r_SP -= 2
+		cycles += 4
+	case 0xC9: // RET
+		// Return from subroutine
+		slog.Debug("Executing RET")
+		addr, err := c.memory.Read16(c.r_SP)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read return address from stack: %v", err))
+		}
+		slog.Debug("Popped return address from stack", "address", fmt.Sprintf("0x%04X", addr))
+		c.r_SP += 2
+		c.r_PC = addr
+		cycles += 4
+	case 0xCB: // CB-prefixed instructions
+		// Handle CB-prefixed instructions
+		instruction, err := c.memory.Read8(c.r_PC)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read CB-prefixed instruction: %v", err))
+		}
+		c.r_PC++
+		cycles += 1
+		cycles += c.executeCB(instruction)
+	case 0xCD: // CALL nn
+		newloc, err := c.memory.Read16(c.r_PC)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read address for CALL: %v", err))
+		}
+		slog.Debug("Executing CALL nn", "address", fmt.Sprintf("0x%04X", newloc))
+		// Push the current PC onto the stack
+		err = c.memory.Write16(c.r_SP-2, c.r_PC)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to write PC to stack for CALL: %v", err))
+		}
+		c.r_SP -= 2
+		// Set the PC to the new location
+		c.r_PC = newloc
+		cycles += 6
 	case 0xE0: // LDH (n),A
 		// Load the value of A into the address 0xFF00 + n
 		n, err := c.memory.Read8(c.r_PC)
@@ -123,6 +417,28 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 			panic(fmt.Sprintf("Failed to write A to (n): %v", err))
 		}
 		cycles += 3
+	case 0xE2: // LD (C),A
+		// Load the value of A into the address pointed to by C
+		addr := uint16(0xFF00) | uint16(c.r_C)
+		slog.Debug("Executing LD (C),A", "address", fmt.Sprintf("0x%04X", addr), "value", fmt.Sprintf("0x%02X", c.r_A))
+		err := c.memory.Write8(addr, c.r_A)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to write A to (C): %v", err))
+		}
+		cycles += 2
+	case 0xEA: // LD (nn),A
+		// Load the value of A into the address nn
+		addr, err := c.memory.Read16(c.r_PC)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read address for LD (nn),A: %v", err))
+		}
+		slog.Debug("Executing LD (nn),A", "address", fmt.Sprintf("0x%04X", addr), "value", fmt.Sprintf("0x%02X", c.r_A))
+		c.r_PC += 2
+		err = c.memory.Write8(addr, c.r_A)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to write A to (nn): %v", err))
+		}
+		cycles += 4
 	case 0xF0: // LDH A,(n)
 		// Load the value from the address 0xFF00 + n into A
 		n, err := c.memory.Read8(c.r_PC)
