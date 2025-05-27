@@ -9,3 +9,4 @@
 - <https://gbdev.io/pandocs/Memory_Map.html>
 - <https://raphaelstaebler.medium.com/memory-and-memory-mapped-i-o-of-the-gameboy-part-3-of-a-series-37025b40d89b>
 - <https://gist.github.com/SakiiR/62661e45ee8b2ab13f0dc8203a7dfbd9>
+- <https://github.com/Gekkio/GhidraBoy>
