@@ -8,7 +8,8 @@ type PPU struct {
 	LCDStatus  byte                  // STAT, LCD status register
 	SCX        byte                  // SCX, scroll X register
 	SCY        byte                  // SCY, scroll Y register
-	LY         byte                  // LY, LCD Y coordinate register
+	LY         byte                  // LY, LCD Y coordinate register, read-only
+	LYC        byte                  // LYC, LY Compare register
 }
 
 func NewPPU() *PPU {
@@ -24,4 +25,5 @@ func (ppu *PPU) Reset() {
 	ppu.SCX = 0x00
 	ppu.SCY = 0x00
 	ppu.LY = 0x00
+	ppu.LYC = 0x00
 }
