@@ -123,6 +123,21 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 			panic(fmt.Sprintf("Failed to write A to (n): %v", err))
 		}
 		cycles += 3
+	case 0xF0: // LDH A,(n)
+		// Load the value from the address 0xFF00 + n into A
+		n, err := c.memory.Read8(c.r_PC)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read n for LDH: %v", err))
+		}
+		slog.Debug("Executing LDH A,(n)", "address", fmt.Sprintf("0x%02X", 0xFF00+uint16(n)))
+		c.r_PC++
+		areg, err := c.memory.Read8(0xFF00 + uint16(n))
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read A from (n): %v", err))
+		}
+		slog.Debug("Loaded A from (n)", "value", fmt.Sprintf("0x%02X", areg))
+		c.r_A = areg
+		cycles += 3
 	case 0xF3: // DI
 		// Disable interrupts
 		slog.Debug("Executing DI")
