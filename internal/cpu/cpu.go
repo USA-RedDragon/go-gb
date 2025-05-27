@@ -137,7 +137,7 @@ func (c *SM83) Reset() {
 	} else {
 		c.r_PC = 0x0100 // Program Counter starts at 0x0100
 	}
-	c.r_SP = 0
+	c.r_SP = 0xFFFE
 	c.halted = false
 	c.exit = false
 }
