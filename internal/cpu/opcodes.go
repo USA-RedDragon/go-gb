@@ -302,6 +302,20 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		slog.Debug("Executing LD A,E", "value", fmt.Sprintf("0x%02X", c.r_E))
 		c.r_A = c.r_E
 		cycles += 1
+	case 0x7C: // LD A,H
+		// Load the value of H into A
+		slog.Debug("Executing LD A,H", "value", fmt.Sprintf("0x%02X", c.r_H))
+		c.r_A = c.r_H
+		cycles += 1
+	case 0x90: // SUB B
+		// Subtract B from A and set flags
+		slog.Debug("Executing SUB B", "B", fmt.Sprintf("0x%02X", c.r_B))
+		c.SetFlag(ZeroFlag, c.r_A == c.r_B)
+		c.SetFlag(NegativeFlag, true)
+		c.SetFlag(HalfCarryFlag, (c.r_A&0x0F) < (c.r_B&0x0F))
+		c.SetFlag(CarryFlag, c.r_A < c.r_B)
+		c.r_A -= c.r_B
+		cycles += 1
 	case 0x95: // SUB L
 		// Subtract L from A and set flags
 		slog.Debug("Executing SUB L", "L", fmt.Sprintf("0x%02X", c.r_L))
