@@ -9,30 +9,26 @@ import (
 	"github.com/USA-RedDragon/go-gb/internal/config"
 	"github.com/USA-RedDragon/go-gb/internal/consts"
 	"github.com/USA-RedDragon/go-gb/internal/memory"
+	"github.com/USA-RedDragon/go-gb/internal/ppu"
 )
 
 type SM83 struct {
 	config    *config.Config
 	memory    memory.MMIO // Memory-mapped I/O
+	PPU       *ppu.PPU
 	cartridge *cartridge.Cartridge
 
 	halted bool
 	exit   bool
 
-	VRAM [consts.VRAMSize]byte // 8KB of VRAM
 	RAM  [consts.RAMSize]byte  // 8KB of RAM
 	HRAM [consts.HRAMSize]byte // 127 bytes of HRAM
 
 	ime             bool // Interrupt Master Enable flag
 	interruptFlag   byte // Interrupt Flag register, used to check which interrupts are pending
 	interruptEnable byte // Interrupt Enable register, used to enable/disable interrupts
-	scX             byte // SCX, scroll X register
-	scY             byte // SCY, scroll Y register
-	lcdStatus       byte // STAT, LCD status register
-	lcdControl      byte // LCDC, LCD control register
 	serialData      byte // SB, serial data register
 	serialControl   byte // SC, serial control register
-	lcdY            byte // LY, LCD Y coordinate register
 
 	// Registers
 	r_IR byte // IR, instruction register
@@ -57,6 +53,7 @@ func NewSM83(config *config.Config, cartridge *cartridge.Cartridge) *SM83 {
 		config:    config,
 		memory:    memory.MMIO{},
 		cartridge: cartridge,
+		PPU:       ppu.NewPPU(),
 	}
 
 	cpu.Reset()
@@ -68,25 +65,20 @@ func NewSM83(config *config.Config, cartridge *cartridge.Cartridge) *SM83 {
 
 func (c *SM83) Reset() {
 	c.RAM = [consts.RAMSize]byte{}
-	c.VRAM = [consts.VRAMSize]byte{}
+	c.PPU.Reset()
 	c.cartridge.Reset()
 	c.HRAM = [consts.HRAMSize]byte{}
 	c.interruptFlag = 0
 	c.interruptEnable = 0
-	c.scX = 0
-	c.scY = 0
-	c.lcdStatus = 0
 	c.serialData = 0
 	c.serialControl = 0
-	c.lcdControl = 0
-	c.lcdY = 0
 
 	c.memory = memory.MMIO{}
 	c.memory.AddMMIO(c.cartridge.ROMBank0[:], 0x0, consts.ROMBankSize)
 	if len(c.cartridge.AdditionalROMBanks) > 0 {
 		c.memory.AddMMIO(c.cartridge.AdditionalROMBanks[0][:], 0x4000, consts.ROMBankSize)
 	}
-	c.memory.AddMMIO(c.VRAM[:], 0x8000, consts.VRAMSize)
+	c.memory.AddMMIO(c.PPU.VRAM[:], 0x8000, consts.VRAMSize)
 	if c.cartridge.RAMSize.Bytes() > 0 {
 		c.memory.AddMMIO(c.cartridge.CartridgeRAMBanks[0][:], 0xA000, consts.CartridgeRAMBankSize)
 	}
@@ -94,11 +86,11 @@ func (c *SM83) Reset() {
 	c.memory.AddMMIOByte(&c.serialData, 0xFF01)
 	c.memory.AddMMIOByte(&c.serialControl, 0xFF02)
 	c.memory.AddMMIOByte(&c.interruptFlag, 0xFF0F)
-	c.memory.AddMMIOByte(&c.lcdControl, 0xFF40)
-	c.memory.AddMMIOByte(&c.lcdStatus, 0xFF41)
-	c.memory.AddMMIOByte(&c.scY, 0xFF42)
-	c.memory.AddMMIOByte(&c.scX, 0xFF43)
-	c.memory.AddMMIOByte(&c.lcdY, 0xFF44)
+	c.memory.AddMMIOByte(&c.PPU.LCDControl, 0xFF40)
+	c.memory.AddMMIOByte(&c.PPU.LCDStatus, 0xFF41)
+	c.memory.AddMMIOByte(&c.PPU.SCY, 0xFF42)
+	c.memory.AddMMIOByte(&c.PPU.SCX, 0xFF43)
+	c.memory.AddMMIOByte(&c.PPU.LY, 0xFF44)
 	c.memory.AddMMIO(c.HRAM[:], 0xFF80, consts.HRAMSize)
 	c.memory.AddMMIOByte(&c.interruptEnable, 0xFFFF)
 
