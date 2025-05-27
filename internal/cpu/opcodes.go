@@ -143,6 +143,19 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		slog.Debug("Executing DI")
 		c.ime = false
 		cycles += 1
+	case 0xFE: // CP n
+		// Subtract the next byte from A and set flags
+		n, err := c.memory.Read8(c.r_PC)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read n for CP: %v", err))
+		}
+		slog.Debug("Executing CP n", "value", fmt.Sprintf("0x%02X", n))
+		c.r_PC++
+		c.SetFlag(ZeroFlag, c.r_A == n)
+		c.SetFlag(NegativeFlag, true)
+		c.SetFlag(HalfCarryFlag, (c.r_A&0x0F) < (n&0x0F))
+		c.SetFlag(CarryFlag, c.r_A < n)
+		cycles += 2
 	default:
 		panic("Unknown instruction: " + fmt.Sprintf("0x%02X", instruction))
 	}
