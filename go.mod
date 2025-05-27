@@ -7,6 +7,7 @@ require (
 	github.com/hajimehoshi/ebiten/v2 v2.8.8
 	github.com/lmittmann/tint v1.0.7
 	github.com/spf13/cobra v1.9.1
+	golang.org/x/image v0.20.0
 )
 
 require (
