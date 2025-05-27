@@ -63,6 +63,11 @@ func NewSM83(config *config.Config, cartridge *cartridge.Cartridge) *SM83 {
 
 	cpu.Reset()
 
+	cpu.PPU.Step()
+	cpu.PPU.Step()
+	cpu.PPU.Step()
+	cpu.PPU.Step()
+
 	slog.Debug("ROM loaded", "rom", cartridge)
 
 	return cpu
@@ -209,14 +214,27 @@ func (c *SM83) DebugRegisters() string {
 	return ret
 }
 
+func (c *SM83) RunUntilFrame() []byte {
+	cycleTime := time.Second / 4194304 / 4 // 4.194304 MHz, divided by 4 (1.048576 MHz) to count machine cycles
+	for !c.PPU.HaveFrame {
+		prevTime := time.Now()
+		cycles := c.Step()
+		for range cycles {
+			c.PPU.Step()
+			c.PPU.Step()
+			c.PPU.Step()
+			c.PPU.Step()
+			time.Sleep(cycleTime - time.Since(prevTime))
+			prevTime = time.Now()
+		}
+	}
+
+	return c.PPU.GetFrame()
+}
+
 func (c *SM83) Run() {
 	cycleTime := time.Second / 4194304 / 4 // 4.194304 MHz, divided by 4 (1.048576 MHz) to count machine cycles
-	// 4 steps to match the cpu startup
-	c.PPU.Step()
-	c.PPU.Step()
-	c.PPU.Step()
-	c.PPU.Step()
-	time.Sleep(cycleTime) // Simulate the initial delay from reading the first instruction
+	time.Sleep(cycleTime)                  // Simulate the initial delay from reading the first instruction
 	for !c.exit {
 		prevTime := time.Now()
 		cycles := c.Step()

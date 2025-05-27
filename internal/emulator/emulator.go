@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime/pprof"
+	"time"
 
 	"github.com/USA-RedDragon/go-gb/internal/cartridge"
 	"github.com/USA-RedDragon/go-gb/internal/config"
@@ -28,18 +29,9 @@ func New(config *config.Config, cartridge *cartridge.Cartridge) *Emulator {
 }
 
 func (e *Emulator) Update() error {
-	// start := time.Now()
-	for {
-		if e.stopped {
-			break
-		}
-		e.cpu.Step()
-		// if e.cpu.PPU.FrameReady() {
-		// 	e.cpu.PPU.ClearFrameReady()
-		// 	e.frametime = int(time.Since(start).Milliseconds())
-		// 	break
-		// }
-	}
+	start := time.Now()
+	_ = e.cpu.RunUntilFrame()
+	e.frametime = int(time.Since(start).Milliseconds())
 	return nil
 }
 
