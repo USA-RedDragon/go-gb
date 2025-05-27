@@ -15,11 +15,13 @@ const (
 	VRAMSize             = 8192  // 8KB of VRAM
 	CartridgeRAMBankSize = 8192  // 8KB of cartridge RAM bank
 	RAMSize              = 8192  // 8KB of RAM
+	HRAMSize             = 127   // 127 bytes of HRAM (0xFF80 - 0xFFFE)
 )
 
 type SM83 struct {
 	config *config.Config
 	memory memory.MMIO // Memory-mapped I/O
+
 	halted bool
 	exit   bool
 
@@ -28,6 +30,17 @@ type SM83 struct {
 	VRAM              [VRAMSize]byte             // 8KB of VRAM
 	CartridgeRAM      [CartridgeRAMBankSize]byte // 8KB of cartridge RAM, if present
 	RAM               [RAMSize]byte              // 8KB of RAM
+	HRAM              [HRAMSize]byte             // 127 bytes of HRAM
+
+	ime             bool // Interrupt Master Enable flag
+	interruptFlag   byte // Interrupt Flag register, used to check which interrupts are pending
+	interruptEnable byte // Interrupt Enable register, used to enable/disable interrupts
+	scX             byte // SCX, scroll X register
+	scY             byte // SCY, scroll Y register
+	lcdStatus       byte // STAT, LCD status register
+	lcdControl      byte // LCDC, LCD control register
+	serialData      byte // SB, serial data register
+	serialControl   byte // SC, serial control register
 
 	// Registers
 	r_IR byte // IR, instruction register
@@ -55,12 +68,6 @@ func NewSM83(config *config.Config) *SM83 {
 
 	cpu.Reset()
 
-	cpu.memory.AddMMIO(cpu.ROMBank0[:], 0x0, ROMBankSize)
-	cpu.memory.AddMMIO(cpu.ROMSwitchableBank[:], 0x4000, ROMBankSize)
-	cpu.memory.AddMMIO(cpu.VRAM[:], 0x8000, VRAMSize)
-	cpu.memory.AddMMIO(cpu.CartridgeRAM[:], 0xA000, CartridgeRAMBankSize)
-	cpu.memory.AddMMIO(cpu.RAM[:], 0xC000, RAMSize)
-
 	if config.ROM != "" {
 		cpu.loadROM()
 	}
@@ -74,6 +81,33 @@ func (c *SM83) Reset() {
 	c.ROMSwitchableBank = [ROMBankSize]byte{}
 	c.VRAM = [VRAMSize]byte{}
 	c.CartridgeRAM = [CartridgeRAMBankSize]byte{}
+	c.HRAM = [HRAMSize]byte{}
+	c.interruptFlag = 0
+	c.interruptEnable = 0
+	c.scX = 0
+	c.scY = 0
+	c.lcdStatus = 0
+	c.serialData = 0
+	c.serialControl = 0
+	c.lcdControl = 0
+
+	c.memory = memory.MMIO{}
+	c.memory.AddMMIO(c.ROMBank0[:], 0x0, ROMBankSize)
+	c.memory.AddMMIO(c.ROMSwitchableBank[:], 0x4000, ROMBankSize)
+	c.memory.AddMMIO(c.VRAM[:], 0x8000, VRAMSize)
+	c.memory.AddMMIO(c.CartridgeRAM[:], 0xA000, CartridgeRAMBankSize)
+	c.memory.AddMMIO(c.RAM[:], 0xC000, RAMSize)
+	c.memory.AddMMIOByte(&c.serialData, 0xFF01)
+	c.memory.AddMMIOByte(&c.serialControl, 0xFF02)
+	c.memory.AddMMIOByte(&c.interruptFlag, 0xFF0F)
+	c.memory.AddMMIOByte(&c.lcdControl, 0xFF40)
+	c.memory.AddMMIOByte(&c.lcdStatus, 0xFF41)
+	c.memory.AddMMIOByte(&c.scY, 0xFF42)
+	c.memory.AddMMIOByte(&c.scX, 0xFF43)
+	c.memory.AddMMIO(c.HRAM[:], 0xFF80, HRAMSize)
+	c.memory.AddMMIOByte(&c.interruptEnable, 0xFFFF)
+
+	c.ime = false
 	c.r_IR = 0
 	c.r_IE = 0
 	c.r_A = 0
@@ -108,6 +142,7 @@ func (c *SM83) GetTitle() string {
 func (c *SM83) Step() int {
 	if !c.halted {
 		instruction := c.fetch()
+		c.r_IR = instruction
 
 		slog.Debug("Instruction", "instruction", fmt.Sprintf("0x%02X", instruction))
 		slog.Debug(c.DebugRegisters())

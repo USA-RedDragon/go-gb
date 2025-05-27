@@ -85,6 +85,16 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 			c.r_H-- // Decrement H if L wraps around
 		}
 		cycles += 2
+	case 0x3E: // LD A,n
+		// Load the next byte as an immediate value into A
+		areg, err := c.memory.Read8(c.r_PC)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read A value: %v", err))
+		}
+		slog.Debug("Executing LD A,n", "value", fmt.Sprintf("0x%02X", areg))
+		c.r_A = areg
+		c.r_PC++
+		cycles += 2
 	case 0xAF: // XOR A
 		c.r_A = 0
 		c.SetFlag(ZeroFlag, true)
@@ -100,6 +110,24 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		slog.Debug("Executing JP nn", "address", fmt.Sprintf("0x%04X", newloc))
 		c.r_PC = newloc
 		cycles += 4
+	case 0xE0: // LDH (n),A
+		// Load the value of A into the address 0xFF00 + n
+		n, err := c.memory.Read8(c.r_PC)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read n for LDH: %v", err))
+		}
+		slog.Debug("Executing LDH (n),A", "address", fmt.Sprintf("0x%02X", 0xFF00+uint16(n)), "value", fmt.Sprintf("0x%02X", c.r_A))
+		c.r_PC++
+		err = c.memory.Write8(0xFF00+uint16(n), c.r_A)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to write A to (n): %v", err))
+		}
+		cycles += 3
+	case 0xF3: // DI
+		// Disable interrupts
+		slog.Debug("Executing DI")
+		c.ime = false
+		cycles += 1
 	default:
 		panic("Unknown instruction: " + fmt.Sprintf("0x%02X", instruction))
 	}
