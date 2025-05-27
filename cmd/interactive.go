@@ -4,35 +4,30 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/signal"
-	"path/filepath"
-	"strings"
 
 	"github.com/USA-RedDragon/configulator"
 	"github.com/USA-RedDragon/go-gb/internal/config"
-	"github.com/USA-RedDragon/go-gb/internal/emulator"
-	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/USA-RedDragon/go-gb/internal/cpu"
 	"github.com/lmittmann/tint"
 	"github.com/spf13/cobra"
 )
 
-func NewCommand(version, commit string) *cobra.Command {
+func newInteractiveCommand(version, commit string) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "go-gb",
+		Use:     "interactive",
 		Version: fmt.Sprintf("%s - %s", version, commit),
 		Annotations: map[string]string{
 			"version": version,
 			"commit":  commit,
 		},
-		RunE:              runRoot,
+		RunE:              runInteractive,
 		SilenceErrors:     true,
 		DisableAutoGenTag: true,
 	}
-	cmd.AddCommand(newInteractiveCommand(version, commit))
 	return cmd
 }
 
-func runRoot(cmd *cobra.Command, _ []string) error {
+func runInteractive(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 	fmt.Printf("go-gb - %s (%s)\n", cmd.Annotations["version"], cmd.Annotations["commit"])
 
@@ -59,26 +54,18 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 	}
 	slog.SetDefault(logger)
 
-	emu := emulator.New(cfg)
-	go func() {
-		ch := make(chan os.Signal, 1)
-		signal.Notify(ch, os.Interrupt)
-		for range ch {
-			fmt.Println("Exiting")
-			emu.Stop()
+	cpu := cpu.NewSM83(cfg)
+	// Wait for the user to hit Enter, run the CPU step and repeat until control-C is pressed
+	fmt.Println("Interactive mode started. Press Enter to step through the CPU instructions. Type exit or quit to exit.")
+	for {
+		var input string
+		fmt.Scanln(&input) // Wait for user input
+		if input == "exit" || input == "quit" {
+			break
 		}
-	}()
-
-	ebiten.SetWindowSize(int(cfg.Scale*160), int(cfg.Scale*144))
-	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-	ebiten.SetFullscreen(cfg.Fullscreen)
-	ebiten.SetScreenClearedEveryFrame(true)
-	if cfg.ROM != "" {
-		name := strings.TrimSuffix(filepath.Base(cfg.ROM), filepath.Ext(cfg.ROM))
-		ebiten.SetWindowTitle(name + " | go-gb")
-	} else {
-		ebiten.SetWindowTitle("go-gb")
+		cpu.Step() // Execute one CPU instruction
+		slog.Debug("CPU Step executed")
 	}
-
-	return ebiten.RunGame(emu)
+	fmt.Println("Exiting interactive mode.")
+	return nil
 }

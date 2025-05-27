@@ -1,0 +1,118 @@
+package memory
+
+import (
+	"fmt"
+	"log/slog"
+	"sort"
+)
+
+type mmioMapping struct {
+	address uint16
+	size    uint16
+
+	data []byte
+}
+
+type MMIO struct {
+	mmios []mmioMapping
+}
+
+func (h *MMIO) mapMemory(addr uint16) uint16 {
+	return addr
+}
+
+// findMMIO finds the MMIO device index that contains the given address
+func (h *MMIO) findMMIOIndex(addr *uint16) (int, error) {
+	*addr = h.mapMemory(*addr)
+
+	for i, mapping := range h.mmios {
+		if *addr >= mapping.address && *addr < mapping.address+mapping.size {
+			// Found the MMIO mapping that contains the address
+			return i, nil
+		}
+	}
+
+	return 0, fmt.Errorf("MMIO address %04x not found", addr)
+}
+
+func (h *MMIO) AddMMIO(data []byte, address uint16, size uint16) {
+	// Add the MMIO, but ensure that the entries are sorted by address.
+	// This is required for the MMIO handler to work properly.
+
+	mapping := mmioMapping{address, size, data}
+	h.mmios = append(h.mmios, mapping)
+
+	sort.Slice(h.mmios, func(i, j int) bool {
+		return h.mmios[i].address < h.mmios[j].address
+	})
+}
+
+func (h *MMIO) checkWritable(addr uint16) bool {
+	// TODO: Implement a check to see if the MMIO address is writable.
+	return true
+}
+
+// Read8 reads a 8-bit value from the MMIO address space and returns it.
+func (h *MMIO) Read8(addr uint16) (uint8, error) {
+	index, err := h.findMMIOIndex(&addr)
+	if err != nil {
+		return 0, err
+	}
+	nonMapped := addr - h.mmios[index].address
+	if nonMapped >= h.mmios[index].size {
+		return 0, fmt.Errorf("MMIO address %04x not found", addr)
+	}
+	return h.mmios[index].data[nonMapped], nil
+}
+
+// Write8 writes a 8-bit value to the MMIO address space.
+func (h *MMIO) Write8(addr uint16, data uint8) error {
+	index, err := h.findMMIOIndex(&addr)
+	if err != nil {
+		return err
+	}
+	slog.Debug("MMIO Write8", "addr", fmt.Sprintf("%04x", addr), "data", fmt.Sprintf("%02x", data))
+	if !h.checkWritable(addr) {
+		return fmt.Errorf("MMIO address %04x not writable", addr)
+	}
+	nonMapped := addr - h.mmios[index].address
+	if nonMapped >= h.mmios[index].size {
+		return fmt.Errorf("MMIO address %04x not found", addr)
+	}
+	h.mmios[index].data[nonMapped] = data
+	return nil
+}
+
+// Read16 reads a 16-bit value from the MMIO address space and returns it.
+func (h *MMIO) Read16(addr uint16) (uint16, error) {
+	index, err := h.findMMIOIndex(&addr)
+	if err != nil {
+		return 0, err
+	}
+	nonMapped := addr - h.mmios[index].address
+	if nonMapped >= h.mmios[index].size {
+		return 0, fmt.Errorf("MMIO address %04x not found", addr)
+	}
+	dataBytes := h.mmios[index].data[nonMapped : nonMapped+2]
+	return uint16(dataBytes[0]) | uint16(dataBytes[1])<<8, nil
+}
+
+// Write16 writes a 16-bit value to the MMIO address space.
+func (h *MMIO) Write16(addr uint16, data uint16) error {
+	index, err := h.findMMIOIndex(&addr)
+	if err != nil {
+		return err
+	}
+	if !h.checkWritable(addr) {
+		panic(fmt.Errorf("MMIO address %04x not writable", addr))
+		// return fmt.Errorf("MMIO address %08x not writable", addr)
+	}
+	slog.Debug("MMIO Write16", "addr", fmt.Sprintf("%04x", addr), "data", fmt.Sprintf("%04x", data))
+	nonMapped := addr - h.mmios[index].address
+	if nonMapped >= h.mmios[index].size {
+		return fmt.Errorf("MMIO address %04x not found", addr)
+	}
+	h.mmios[index].data[nonMapped] = byte(data)
+	h.mmios[index].data[nonMapped+1] = byte(data >> 8)
+	return nil
+}
