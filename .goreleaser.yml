@@ -1,0 +1,40 @@
+---
+project_name: go-gb
+
+release:
+  extra_files:
+    - glob: ./LICENSE
+  github:
+    owner: USA-RedDragon
+    name: "{{ .ProjectName }}"
+
+builds:
+  - main: .
+    binary: "{{ .ProjectName }}"
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+      - arm
+      - riscv64
+    env:
+      - CGO_ENABLED=1
+    ignore:
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: riscv64
+      - goos: darwin
+        goarch: riscv64
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+      - -X main.commit={{ .ShortCommit }}
+    flags:
+      - -trimpath
+
+milestones:
+  - close: true

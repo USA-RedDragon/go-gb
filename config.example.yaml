@@ -1,0 +1,4 @@
+# This is an example configuration file
+
+# Log level can be one of debug, info, warn, error. Defaults to info.
+log-level: info
