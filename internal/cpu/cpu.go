@@ -180,7 +180,10 @@ func (c *SM83) Run() {
 	for !c.exit {
 		prevTime := time.Now()
 		cycles := c.Step()
-		time.Sleep(cycleTime*time.Duration(cycles) - time.Since(prevTime))
+		for range cycles {
+			time.Sleep(cycleTime - time.Since(prevTime))
+			prevTime = time.Now()
+		}
 	}
 }
 
