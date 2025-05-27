@@ -14,9 +14,9 @@ type PPU struct {
 }
 
 func NewPPU() *PPU {
-	return &PPU{
-		VRAM: [consts.VRAMSize]byte{},
-	}
+	ppu := &PPU{}
+	ppu.Reset()
+	return ppu
 }
 
 func (ppu *PPU) Reset() {
