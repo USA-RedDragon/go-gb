@@ -32,6 +32,7 @@ type SM83 struct {
 	interruptEnable byte // Interrupt Enable register, used to enable/disable interrupts
 	serialData      byte // SB, serial data register
 	serialControl   byte // SC, serial control register
+	bank            byte // 0xFF50, used to disable BIOS
 
 	// Registers
 	r_IR byte // IR, instruction register
@@ -76,6 +77,7 @@ func (c *SM83) Reset() {
 	c.interruptEnable = 0
 	c.serialData = 0
 	c.serialControl = 0
+	c.bank = 0x00
 
 	c.memory = memory.MMIO{}
 
@@ -103,6 +105,8 @@ func (c *SM83) Reset() {
 		c.memory.AddMMIO(c.cartridge.CartridgeRAMBanks[0][:], 0xA000, consts.CartridgeRAMBankSize)
 	}
 	c.memory.AddMMIO(c.RAM[:], 0xC000, consts.RAMSize)
+	c.memory.AddMMIO(c.PPU.OAM[:], 0xFE00, consts.OAMSize)
+	c.memory.AddMMIO(make([]byte, consts.ProhibitedSize)[:], 0xFEA0, consts.ProhibitedSize)
 	c.memory.AddMMIOByte(&c.serialData, 0xFF01)
 	c.memory.AddMMIOByte(&c.serialControl, 0xFF02)
 	c.memory.AddMMIOByte(&c.interruptFlag, 0xFF0F)
@@ -120,6 +124,11 @@ func (c *SM83) Reset() {
 	c.memory.AddMMIOByte(&c.PPU.LY, 0xFF44)
 	c.memory.AddMMIOByte(&c.PPU.LYC, 0xFF45)
 	c.memory.AddMMIOByte(&c.PPU.BGP, 0xFF47)
+	c.memory.AddMMIOByte(&c.PPU.OBP0, 0xFF48)
+	c.memory.AddMMIOByte(&c.PPU.OBP1, 0xFF49)
+	c.memory.AddMMIOByte(&c.bank, 0xFF50)
+	byt := byte(0x00)
+	c.memory.AddMMIOByte(&byt, 0xFF7F) // Unused
 	c.memory.AddMMIO(c.HRAM[:], 0xFF80, consts.HRAMSize)
 	c.memory.AddMMIOByte(&c.interruptEnable, 0xFFFF)
 
@@ -156,7 +165,18 @@ func (c *SM83) Step() int {
 			c.PPU.Step()
 		}
 
-		return c.execute(instruction)
+		preBank := c.bank
+		steps := c.execute(instruction)
+		if c.bank != preBank && c.bank != 0 && c.config.BIOS != "" {
+			// Boot rom disabled
+			err := c.memory.RemoveMMIO(0x0000, consts.BIOSSize)
+			if err != nil {
+				panic(fmt.Sprintf("Failed to remove BIOS MMIO: %v", err))
+			}
+			c.memory.AddMMIO(c.cartridge.ROMBank0[:consts.BIOSSize], 0x0000, consts.BIOSSize)
+		}
+
+		return steps
 	}
 	return 1
 }

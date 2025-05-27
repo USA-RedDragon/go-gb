@@ -24,6 +24,9 @@ type PPU struct {
 	LY         byte                  // LY, LCD Y coordinate register, read-only
 	LYC        byte                  // LYC, LY Compare register
 	BGP        byte                  // BGP, background palette data
+	OBP0       byte                  // OBP0, object palette 0 data
+	OBP1       byte                  // OBP1, object palette 1 data
+	OAM        [consts.OAMSize]byte  // OAM, Object Attribute Memory
 
 	state ppuState // Current state of the PPU
 	ticks uint16
@@ -38,6 +41,7 @@ func NewPPU() *PPU {
 
 func (ppu *PPU) Reset() {
 	ppu.VRAM = [consts.VRAMSize]byte{}
+	ppu.OAM = [consts.OAMSize]byte{}
 	ppu.LCDControl = 0x00
 	ppu.LCDStatus = 0x00
 	ppu.SCX = 0x00
@@ -45,6 +49,8 @@ func (ppu *PPU) Reset() {
 	ppu.LY = 0x00
 	ppu.LYC = 0x00
 	ppu.BGP = 0x00
+	ppu.OBP0 = 0x00
+	ppu.OBP1 = 0x00
 }
 
 func (ppu *PPU) Step() {

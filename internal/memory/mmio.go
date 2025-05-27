@@ -45,6 +45,17 @@ func (h *MMIO) findMMIOIndex(addr *uint16) (int, error) {
 	return 0, fmt.Errorf("MMIO address %04x not found", *addr)
 }
 
+func (h *MMIO) RemoveMMIO(address uint16, size uint16) error {
+	for i, mapping := range h.mmios {
+		if mapping.address == address && mapping.size == size {
+			h.mmios = append(h.mmios[:i], h.mmios[i+1:]...)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("MMIO address %04x with size %d not found", address, size)
+}
+
 func (h *MMIO) AddMMIO(data []byte, address uint16, size uint16) {
 	// Add the MMIO, but ensure that the entries are sorted by address.
 	// This is required for the MMIO handler to work properly.
