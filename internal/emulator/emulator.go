@@ -107,7 +107,16 @@ func (e *Emulator) Draw(screen *ebiten.Image) {
 	}
 	screen.Clear()
 	screen.WritePixels(e.frame)
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("FPS: %0.2f\nFrame Time: %dms\nTPS: %0.2f", 1000.0/float64(e.frametime), e.frametime, ebiten.ActualTPS()))
+	ebitenutil.DebugPrint(
+		screen,
+		fmt.Sprintf(
+			"FPS: %0.2f\nFrame Time: %dms\nTPS: %0.2f\nPC: 0x%04X",
+			1000.0/float64(e.frametime),
+			e.frametime,
+			ebiten.ActualTPS(),
+			e.cpu.GetPC(),
+		),
+	)
 }
 
 func (e *Emulator) Layout(_, _ int) (int, int) {

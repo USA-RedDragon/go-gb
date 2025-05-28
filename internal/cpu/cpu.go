@@ -158,6 +158,10 @@ func (c *SM83) Reset() {
 	c.exit = false
 }
 
+func (c *SM83) GetPC() uint16 {
+	return c.r_PC
+}
+
 func (c *SM83) Step() int {
 	if !c.halted {
 		instruction := c.fetch()
