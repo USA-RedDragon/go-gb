@@ -67,7 +67,6 @@ func (ppu *PPU) Reset() {
 }
 
 func (ppu *PPU) Step() {
-	ppu.ticks++
 	switch ppu.state {
 	case ppuStateOAMSearch:
 		// TODO: find sprites
@@ -82,14 +81,14 @@ func (ppu *PPU) Step() {
 			ppu.Fetcher.Step()
 		}
 		if ppu.Fetcher.PixelFIFO.Size() <= 8 {
-			return
+			break
 		}
 
 		// Put a pixel from the FIFO on screen.
 		pixelColor, ok := ppu.Fetcher.PixelFIFO.Pop()
 		if !ok {
 			slog.Error("PPU: Pixel FIFO is empty, cannot transfer pixel", "LY", ppu.LY, "ticks", ppu.ticks, "x", ppu.x)
-			return
+			break
 		}
 
 		ppu.FrameBuffer_A = append(ppu.FrameBuffer_A, pixelColor)
@@ -129,4 +128,5 @@ func (ppu *PPU) Step() {
 	default:
 		slog.Error("Unknown PPU state encountered", "state", ppu.state)
 	}
+	ppu.ticks++
 }
