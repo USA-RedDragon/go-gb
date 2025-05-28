@@ -61,16 +61,16 @@ func (e *Emulator) convertToScreen(frame []byte) []byte {
 			screen[i*4+2] = 0xFF // B
 			screen[i*4+3] = 0xFF // A
 		case 0x01:
-			// 66% Gray
-			screen[i*4+0] = 0xAA // R
-			screen[i*4+1] = 0xAA // G
-			screen[i*4+2] = 0xAA // B
-			screen[i*4+3] = 0xFF // A
-		case 0x02:
 			// 33% Gray
 			screen[i*4+0] = 0x55 // R
 			screen[i*4+1] = 0x55 // G
 			screen[i*4+2] = 0x55 // B
+			screen[i*4+3] = 0xFF // A
+		case 0x02:
+			// 66% Gray
+			screen[i*4+0] = 0xAA // R
+			screen[i*4+1] = 0xAA // G
+			screen[i*4+2] = 0xAA // B
 			screen[i*4+3] = 0xFF // A
 		case 0x03:
 			// Black
