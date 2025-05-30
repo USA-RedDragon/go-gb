@@ -37,10 +37,6 @@ type SM83 struct {
 	bank            byte  // 0xFF50, used to disable BIOS
 	TMA             uint8 // Timer Modulo register, used for the timer
 
-	// Registers
-	r_IR byte // IR, instruction register
-	r_IE byte // IE, interrupt enable register
-
 	r_A byte // A, accumulator register
 	r_F byte // F, flags register
 	r_B byte // B
@@ -163,8 +159,6 @@ func (c *SM83) Reset() {
 
 	if c.config.BIOS != "" {
 		c.ime = false
-		c.r_IR = 0
-		c.r_IE = 0
 		c.r_A = 0
 		c.r_F = 0
 		c.r_B = 0
@@ -176,8 +170,6 @@ func (c *SM83) Reset() {
 		c.r_PC = 0x0
 	} else {
 		c.ime = false
-		c.r_IR = 0
-		c.r_IE = 0
 		c.r_A = 0x01
 		c.r_F = byte(ZeroFlag)
 		if c.cartridge.ROMBank0[0x014D] == 0x00 {
@@ -204,7 +196,6 @@ func (c *SM83) GetPC() uint16 {
 func (c *SM83) Step() int {
 	if !c.halted {
 		instruction := c.fetch()
-		c.r_IR = instruction
 
 		slog.Debug("Instruction", "instruction", fmt.Sprintf("0x%02X", instruction))
 		slog.Debug(c.DebugRegisters())
@@ -239,9 +230,28 @@ func (c *SM83) fetch() byte {
 	return instruction
 }
 
+type InterruptFlag uint8
+
+const (
+	// Bit 4 is Joypad
+	JoypadInterrupt InterruptFlag = 1 << 4
+	// Bit 3 is Serial
+	SerialInterrupt InterruptFlag = 1 << 3
+	// Bit 2 is Timer
+	TimerInterrupt InterruptFlag = 1 << 2
+	// Bit 1 is LCD
+	LCDInterrupt InterruptFlag = 1 << 1
+	// Bit 0 is VBlank
+	VBlankInterrupt InterruptFlag = 1 << 0
+)
+
+func (c *SM83) GetIntterruptFlag(flag InterruptFlag) bool {
+	return c.interruptFlag&byte(flag) != 0
+}
+
 func (c *SM83) DebugRegisters() string {
 	var ret = "\n"
-	ret += fmt.Sprintf("IR: 0x%02X\t IE: 0x%02X\n", c.r_IR, c.r_IE)
+	ret += fmt.Sprintf("IE: 0x%02X\n", c.interruptEnable)
 	ret += fmt.Sprintf(" A: 0x%02X\t  F: 0x%02X\n", c.r_A, c.r_F)
 	ret += fmt.Sprintf(" B: 0x%02X\t  C: 0x%02X\n", c.r_B, c.r_C)
 	ret += fmt.Sprintf(" D: 0x%02X\t  E: 0x%02X\n", c.r_D, c.r_E)
@@ -252,6 +262,13 @@ func (c *SM83) DebugRegisters() string {
 		c.GetFlag(HalfCarryFlag),
 		c.GetFlag(NegativeFlag),
 		c.GetFlag(ZeroFlag),
+	)
+	ret += fmt.Sprintf("Interrupts: Joy: %t, Serial: %t, Timer: %t, LCD: %t, VBlank: %t\n",
+		c.GetIntterruptFlag(JoypadInterrupt),
+		c.GetIntterruptFlag(SerialInterrupt),
+		c.GetIntterruptFlag(TimerInterrupt),
+		c.GetIntterruptFlag(LCDInterrupt),
+		c.GetIntterruptFlag(VBlankInterrupt),
 	)
 
 	return ret
