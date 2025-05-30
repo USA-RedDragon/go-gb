@@ -91,6 +91,29 @@ func (ppu *PPU) Reset() {
 	ppu.disabled = true
 }
 
+func (ppu *PPU) GetPalleteColor(idx byte) byte {
+	// ppu.BGP is the background palette data
+	// Bits 7 and 6 are the color for index 3
+	// Bits 5 and 4 are the color for index 2
+	// Bits 3 and 2 are the color for index 1
+	// Bits 1 and 0 are the color for index 0
+	var color byte
+	switch idx {
+	case 0:
+		color = (ppu.BGP & 0x03) // Get bits 1 and 0
+	case 1:
+		color = (ppu.BGP & 0x0C) >> 2 // Get bits 3 and 2
+	case 2:
+		color = (ppu.BGP & 0x30) >> 4 // Get bits 5 and 4
+	case 3:
+		color = (ppu.BGP & 0xC0) >> 6 // Get bits 7 and 6
+	default:
+		slog.Error("PPU: Invalid palette index", "index", idx)
+		color = 0x00 // Default to black if index is invalid
+	}
+	return color
+}
+
 func (ppu *PPU) Step() {
 	if ppu.disabled {
 		if ppu.LCDControl&LCDCDisplayEnable != 0 {
@@ -131,13 +154,13 @@ func (ppu *PPU) Step() {
 		}
 
 		// Put a pixel from the FIFO on screen.
-		pixelColor, ok := ppu.Fetcher.PixelFIFO.Pop()
+		pixelIdx, ok := ppu.Fetcher.PixelFIFO.Pop()
 		if !ok {
 			slog.Error("PPU: Pixel FIFO is empty, cannot transfer pixel", "LY", ppu.LY, "ticks", ppu.ticks, "x", ppu.x)
 			break
 		}
 
-		ppu.FrameBuffer_A = append(ppu.FrameBuffer_A, pixelColor)
+		ppu.FrameBuffer_A = append(ppu.FrameBuffer_A, ppu.GetPalleteColor(pixelIdx))
 
 		ppu.x++
 		if ppu.x == 160 {
