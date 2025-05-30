@@ -9,6 +9,7 @@ import (
 	"github.com/USA-RedDragon/go-gb/internal/cartridge"
 	"github.com/USA-RedDragon/go-gb/internal/config"
 	"github.com/USA-RedDragon/go-gb/internal/consts"
+	"github.com/USA-RedDragon/go-gb/internal/input"
 	"github.com/USA-RedDragon/go-gb/internal/memory"
 	"github.com/USA-RedDragon/go-gb/internal/ppu"
 	"github.com/USA-RedDragon/go-gb/internal/sound"
@@ -20,6 +21,7 @@ type SM83 struct {
 	PPU       *ppu.PPU
 	Sound     *sound.Sound
 	cartridge *cartridge.Cartridge
+	Input     *input.Input
 
 	halted bool
 	exit   bool
@@ -27,12 +29,13 @@ type SM83 struct {
 	RAM  [consts.RAMSize]byte  // 8KB of RAM
 	HRAM [consts.HRAMSize]byte // 127 bytes of HRAM
 
-	ime             bool // Interrupt Master Enable flag
-	interruptFlag   byte // Interrupt Flag register, used to check which interrupts are pending
-	interruptEnable byte // Interrupt Enable register, used to enable/disable interrupts
-	serialData      byte // SB, serial data register
-	serialControl   byte // SC, serial control register
-	bank            byte // 0xFF50, used to disable BIOS
+	ime             bool  // Interrupt Master Enable flag
+	interruptFlag   byte  // Interrupt Flag register, used to check which interrupts are pending
+	interruptEnable byte  // Interrupt Enable register, used to enable/disable interrupts
+	serialData      byte  // SB, serial data register
+	serialControl   byte  // SC, serial control register
+	bank            byte  // 0xFF50, used to disable BIOS
+	TMA             uint8 // Timer Modulo register, used for the timer
 
 	// Registers
 	r_IR byte // IR, instruction register
@@ -59,6 +62,7 @@ func NewSM83(config *config.Config, cartridge *cartridge.Cartridge) *SM83 {
 		cartridge: cartridge,
 		PPU:       ppu.NewPPU(),
 		Sound:     sound.NewSound(),
+		Input:     input.NewInput(),
 	}
 
 	cpu.Reset()
@@ -112,13 +116,21 @@ func (c *SM83) Reset() {
 	c.memory.AddMMIO(c.RAM[:], 0xC000, consts.RAMSize)
 	c.memory.AddMMIO(c.PPU.OAM[:], 0xFE00, consts.OAMSize)
 	c.memory.AddMMIO(make([]byte, consts.ProhibitedSize)[:], 0xFEA0, consts.ProhibitedSize)
+	c.memory.AddMMIOByte(&c.Input.JOYP, 0xFF00)
 	c.memory.AddMMIOByte(&c.serialData, 0xFF01)
 	c.memory.AddMMIOByte(&c.serialControl, 0xFF02)
+	c.memory.AddMMIOByte(&c.TMA, 0xFF06)
 	c.memory.AddMMIOByte(&c.interruptFlag, 0xFF0F)
+	c.memory.AddMMIOByte(&c.Sound.NR10, 0xFF10)
 	c.memory.AddMMIOByte(&c.Sound.NR11, 0xFF11)
 	c.memory.AddMMIOByte(&c.Sound.NR12, 0xFF12)
 	c.memory.AddMMIOByte(&c.Sound.NR13, 0xFF13)
 	c.memory.AddMMIOByte(&c.Sound.NR14, 0xFF14)
+	c.memory.AddMMIOByte(&c.Sound.NR22, 0xFF17)
+	c.memory.AddMMIOByte(&c.Sound.NR24, 0xFF19)
+	c.memory.AddMMIOByte(&c.Sound.NR30, 0xFF1A)
+	c.memory.AddMMIOByte(&c.Sound.NR42, 0xFF21)
+	c.memory.AddMMIOByte(&c.Sound.NR44, 0xFF23)
 	c.memory.AddMMIOByte(&c.Sound.NR50, 0xFF24)
 	c.memory.AddMMIOByte(&c.Sound.NR51, 0xFF25)
 	c.memory.AddMMIOByte(&c.Sound.NR52, 0xFF26)
@@ -131,6 +143,8 @@ func (c *SM83) Reset() {
 	c.memory.AddMMIOByte(&c.PPU.BGP, 0xFF47)
 	c.memory.AddMMIOByte(&c.PPU.OBP0, 0xFF48)
 	c.memory.AddMMIOByte(&c.PPU.OBP1, 0xFF49)
+	c.memory.AddMMIOByte(&c.PPU.WY, 0xFF4A)
+	c.memory.AddMMIOByte(&c.PPU.WX, 0xFF4B)
 	c.memory.AddMMIOByte(&c.bank, 0xFF50)
 	byt := byte(0x00)
 	c.memory.AddMMIOByte(&byt, 0xFF7F) // Unused

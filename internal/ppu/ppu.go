@@ -23,6 +23,8 @@ type PPU struct {
 	SCY        byte                  // SCY, scroll Y register
 	LY         byte                  // LY, LCD Y coordinate register, read-only
 	LYC        byte                  // LYC, LY Compare register
+	WX         byte                  // WX, window X coordinate register
+	WY         byte                  // WY, window Y coordinate register
 	BGP        byte                  // BGP, background palette data
 	OBP0       byte                  // OBP0, object palette 0 data
 	OBP1       byte                  // OBP1, object palette 1 data
@@ -64,6 +66,8 @@ func (ppu *PPU) Reset() {
 	ppu.BGP = 0x00
 	ppu.OBP0 = 0x00
 	ppu.OBP1 = 0x00
+	ppu.WX = 0x00
+	ppu.WY = 0x00
 }
 
 func (ppu *PPU) Step() {
