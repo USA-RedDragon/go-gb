@@ -459,16 +459,8 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		c.SetFlag(CarryFlag, c.r_A < hlValue)
 		cycles += 2
 	case 0xC1: // POP BC
-		// Pop the top 16 bits from the stack into BC
+		c.pop16(&c.r_B, &c.r_C)
 		slog.Debug("Executing POP BC")
-		bc, err := c.memory.Read16(c.r_SP)
-		if err != nil {
-			panic(fmt.Sprintf("Failed to read BC from stack: %v", err))
-		}
-		slog.Debug("Popped BC from stack", "value", fmt.Sprintf("0x%04X", bc))
-		c.r_B = byte(bc >> 8)
-		c.r_C = byte(bc & 0xFF)
-		c.r_SP += 2
 		cycles += 3
 	case 0xC3: // JP nn
 		newloc, err := c.memory.Read16(c.r_PC)
@@ -480,13 +472,7 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		cycles += 4
 	case 0xC5: // PUSH BC
 		// Push the current BC register onto the stack
-		bc := uint16(c.r_B)<<8 | uint16(c.r_C)
-		slog.Debug("Executing PUSH BC", "value", fmt.Sprintf("0x%04X", bc))
-		err := c.memory.Write16(c.r_SP-2, bc)
-		if err != nil {
-			panic(fmt.Sprintf("Failed to write BC to stack: %v", err))
-		}
-		c.r_SP -= 2
+		c.push16(&c.r_B, &c.r_C)
 		cycles += 4
 	case 0xC9: // RET
 		// Return from subroutine
@@ -524,6 +510,14 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		// Set the PC to the new location
 		c.r_PC = newloc
 		cycles += 6
+	case 0xD1: // POP DE
+		c.pop16(&c.r_D, &c.r_E)
+		slog.Debug("Executing POP DE")
+		cycles += 3
+	case 0xD5: // PUSH DE
+		c.push16(&c.r_D, &c.r_E)
+		slog.Debug("Executing PUSH DE", "value", fmt.Sprintf("0x%04X", uint16(c.r_D)<<8|uint16(c.r_E)))
+		cycles += 4
 	case 0xE0: // LDH (n),A
 		// Load the value of A into the address 0xFF00 + n
 		n, err := c.memory.Read8(c.r_PC)
@@ -536,6 +530,10 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		if err != nil {
 			panic(fmt.Sprintf("Failed to write A to (n): %v", err))
 		}
+		cycles += 3
+	case 0xE1: // POP HL
+		c.pop16(&c.r_H, &c.r_L)
+		slog.Debug("Executing POP HL")
 		cycles += 3
 	case 0xE2: // LD (C),A
 		// Load the value of A into the address pointed to by C
@@ -558,6 +556,10 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		if err != nil {
 			panic(fmt.Sprintf("Failed to write A to (nn): %v", err))
 		}
+		cycles += 4
+	case 0xE5: // PUSH HL
+		c.push16(&c.r_H, &c.r_L)
+		slog.Debug("Executing PUSH HL", "value", fmt.Sprintf("0x%04X", uint16(c.r_H)<<8|uint16(c.r_L)))
 		cycles += 4
 	case 0xF0: // LDH A,(n)
 		// Load the value from the address 0xFF00 + n into A
