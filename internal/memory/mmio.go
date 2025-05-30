@@ -14,8 +14,9 @@ const (
 )
 
 type mmioMapping struct {
-	address uint16
-	size    uint16
+	address  uint16
+	size     uint16
+	readOnly bool
 
 	mmioType mmioType
 
@@ -56,11 +57,11 @@ func (h *MMIO) RemoveMMIO(address uint16, size uint16) error {
 	return fmt.Errorf("MMIO address %04x with size %d not found", address, size)
 }
 
-func (h *MMIO) AddMMIO(data []byte, address uint16, size uint16) {
+func (h *MMIO) AddMMIO(data []byte, address uint16, size uint16, readOnly bool) {
 	// Add the MMIO, but ensure that the entries are sorted by address.
 	// This is required for the MMIO handler to work properly.
 
-	mapping := mmioMapping{address, size, MMIOTypeByteArray, data, nil}
+	mapping := mmioMapping{address, size, readOnly, MMIOTypeByteArray, data, nil}
 	h.mmios = append(h.mmios, mapping)
 
 	sort.Slice(h.mmios, func(i, j int) bool {
@@ -68,20 +69,15 @@ func (h *MMIO) AddMMIO(data []byte, address uint16, size uint16) {
 	})
 }
 
-func (h *MMIO) AddMMIOByte(data *byte, address uint16) {
+func (h *MMIO) AddMMIOByte(data *byte, address uint16, readOnly bool) {
 	// Add a single byte MMIO mapping.
 	// This is useful for registers that are not larger than 1 byte.
-	mapping := mmioMapping{address, 1, MMIOTypeByte, []byte{}, data}
+	mapping := mmioMapping{address, 1, readOnly, MMIOTypeByte, []byte{}, data}
 	h.mmios = append(h.mmios, mapping)
 
 	sort.Slice(h.mmios, func(i, j int) bool {
 		return h.mmios[i].address < h.mmios[j].address
 	})
-}
-
-func (h *MMIO) checkWritable(addr uint16) bool {
-	// TODO: Implement a check to see if the MMIO address is writable.
-	return true
 }
 
 // Read8 reads a 8-bit value from the MMIO address space and returns it.
@@ -109,8 +105,8 @@ func (h *MMIO) Write8(addr uint16, data uint8) error {
 		return err
 	}
 	slog.Debug("MMIO Write8", "addr", fmt.Sprintf("%04x", addr), "data", fmt.Sprintf("%02x", data))
-	if !h.checkWritable(addr) {
-		return fmt.Errorf("MMIO address %04x not writable", addr)
+	if h.mmios[index].readOnly {
+		return nil
 	}
 	nonMapped := addr - h.mmios[index].address
 	if nonMapped >= h.mmios[index].size {
@@ -149,9 +145,8 @@ func (h *MMIO) Write16(addr uint16, data uint16) error {
 	if err != nil {
 		return err
 	}
-	if !h.checkWritable(addr) {
-		panic(fmt.Errorf("MMIO address %04x not writable", addr))
-		// return fmt.Errorf("MMIO address %08x not writable", addr)
+	if h.mmios[index].readOnly {
+		return nil
 	}
 	slog.Debug("MMIO Write16", "addr", fmt.Sprintf("%04x", addr), "data", fmt.Sprintf("%04x", data))
 	nonMapped := addr - h.mmios[index].address
