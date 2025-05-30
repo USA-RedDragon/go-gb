@@ -328,6 +328,9 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 			c.r_H++ // Increment H if L wraps around
 		}
 		cycles += 2
+	case 0x2C: // INC L
+		c.incRegister(&c.r_L)
+		cycles += 1
 	case 0x2E: // LD L,n
 		// Load the next byte as an immediate value into L
 		lreg, err := c.memory.Read8(c.r_PC)
@@ -369,6 +372,29 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 			c.r_H-- // Decrement H if L wraps around
 		}
 		cycles += 2
+	case 0x35: // DEC (HL)
+		// Decrement the value at address HL
+		addr := uint16(c.r_H)<<8 | uint16(c.r_L)
+		slog.Debug("Executing DEC (HL)", "address", fmt.Sprintf("0x%04X", addr))
+		value, err := c.memory.Read8(addr)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read value from (HL): %v", err))
+		}
+		slog.Debug("Value before DEC", "value", fmt.Sprintf("0x%02X", value))
+		value--
+		if value == 0xFF {
+			c.SetFlag(ZeroFlag, true)
+		} else {
+			c.SetFlag(ZeroFlag, false)
+		}
+		c.SetFlag(NegativeFlag, true)
+		c.SetFlag(HalfCarryFlag, (value&0x0F) == 0x0F)
+		slog.Debug("Value after DEC", "value", fmt.Sprintf("0x%02X", value))
+		err = c.memory.Write8(addr, value)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to write decremented value to (HL): %v", err))
+		}
+		cycles += 3
 	case 0x36: // LD (HL),n
 		// Load the next byte as an immediate value into the address pointed to by HL
 		addr := uint16(c.r_H)<<8 | uint16(c.r_L)
