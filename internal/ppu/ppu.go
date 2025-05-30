@@ -110,6 +110,7 @@ func (ppu *PPU) Step() {
 			if ppu.LY == 144 {
 				slog.Debug("PPU: VBlank started", "LY", ppu.LY, "ticks", ppu.ticks)
 				ppu.FrameBuffer_B = ppu.FrameBuffer_A
+				ppu.FrameBuffer_A = []byte{} // Clear the A buffer for the next frame
 				ppu.HaveFrame = true
 				ppu.state = ppuStateVBlank
 			} else {
