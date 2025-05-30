@@ -11,5 +11,5 @@ func NewInput() *Input {
 }
 
 func (s *Input) Reset() {
-	s.JOYP = 0xCF
+	s.JOYP = 0xFF
 }
