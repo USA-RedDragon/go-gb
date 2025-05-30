@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/USA-RedDragon/configulator"
 	"github.com/USA-RedDragon/go-gb/internal/cartridge"
@@ -68,6 +70,26 @@ func runInteractive(cmd *cobra.Command, _ []string) error {
 		fmt.Scanln(&input) // Wait for user input
 		if input == "exit" || input == "quit" {
 			break
+		}
+		if strings.HasPrefix(input, "0x") {
+			// Convert hex address to integer
+			addr, err := strconv.ParseUint(input[2:], 16, 16)
+			if err != nil {
+				fmt.Printf("Invalid address: %s\n", input)
+				continue
+			}
+			// Run Step until the PC reaches the specified address
+			for cpu.GetPC() != uint16(addr) {
+				cpu.Step() // Execute one CPU instruction
+			}
+		}
+		if steps, err := strconv.Atoi(input); err == nil {
+			// If input is a number, run Step that many times
+			for range steps {
+				cpu.Step() // Execute one CPU instruction
+				slog.Debug("CPU Step executed")
+			}
+			continue
 		}
 		cpu.Step() // Execute one CPU instruction
 		slog.Debug("CPU Step executed")
