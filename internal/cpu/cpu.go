@@ -137,20 +137,35 @@ func (c *SM83) Reset() {
 	c.memory.AddMMIO(c.HRAM[:], 0xFF80, consts.HRAMSize)
 	c.memory.AddMMIOByte(&c.interruptEnable, 0xFFFF)
 
-	c.ime = false
-	c.r_IR = 0
-	c.r_IE = 0
-	c.r_A = 0
-	c.r_F = 0
-	c.r_B = 0
-	c.r_C = 0
-	c.r_D = 0
-	c.r_E = 0
-	c.r_H = 0
-	c.r_L = 0
 	if c.config.BIOS != "" {
+		c.ime = false
+		c.r_IR = 0
+		c.r_IE = 0
+		c.r_A = 0
+		c.r_F = 0
+		c.r_B = 0
+		c.r_C = 0
+		c.r_D = 0
+		c.r_E = 0
+		c.r_H = 0
+		c.r_L = 0
 		c.r_PC = 0x0
 	} else {
+		c.ime = false
+		c.r_IR = 0
+		c.r_IE = 0
+		c.r_A = 0x01
+		c.r_F = byte(ZeroFlag)
+		if c.cartridge.ROMBank0[0x014D] == 0x00 {
+			// Header checksum, if zero the Carry and Half Carry flags are set
+			c.r_F |= byte(CarryFlag) | byte(HalfCarryFlag)
+		}
+		c.r_B = 0
+		c.r_C = 0x13
+		c.r_D = 0
+		c.r_E = 0xD8
+		c.r_H = 0x01
+		c.r_L = 0x4D
 		c.r_PC = 0x0100 // Program Counter starts at 0x0100
 	}
 	c.r_SP = 0xFFFE
