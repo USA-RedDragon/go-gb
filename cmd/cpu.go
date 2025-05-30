@@ -56,12 +56,15 @@ func runCPU(cmd *cobra.Command, _ []string) error {
 	}
 	slog.SetDefault(logger)
 
-	cartridge, err := cartridge.NewCartridge(cfg.ROM)
-	if err != nil {
-		return fmt.Errorf("failed to load cartridge: %w", err)
+	var cart *cartridge.Cartridge
+	if cfg.ROM != "" {
+		cart, err = cartridge.NewCartridge(cfg.ROM)
+		if err != nil {
+			return fmt.Errorf("failed to load cartridge: %w", err)
+		}
 	}
 
-	cpu := cpu.NewSM83(cfg, cartridge)
+	cpu := cpu.NewSM83(cfg, cart)
 	go func() {
 		ch := make(chan os.Signal, 1)
 		signal.Notify(ch, os.Interrupt)

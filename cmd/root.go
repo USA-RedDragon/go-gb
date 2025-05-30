@@ -60,12 +60,15 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 	}
 	slog.SetDefault(logger)
 
-	cartridge, err := cartridge.NewCartridge(cfg.ROM)
-	if err != nil {
-		return fmt.Errorf("failed to load cartridge: %w", err)
+	var cart *cartridge.Cartridge
+	if cfg.ROM != "" {
+		cart, err = cartridge.NewCartridge(cfg.ROM)
+		if err != nil {
+			return fmt.Errorf("failed to load cartridge: %w", err)
+		}
 	}
 
-	emu := emulator.New(cfg, cartridge)
+	emu := emulator.New(cfg, cart)
 	go func() {
 		ch := make(chan os.Signal, 1)
 		signal.Notify(ch, os.Interrupt)
@@ -79,10 +82,12 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetFullscreen(cfg.Fullscreen)
 	ebiten.SetScreenClearedEveryFrame(true)
-	if cartridge.Title != "" {
-		ebiten.SetWindowTitle(fmt.Sprintf("%s (v%d) - %s [%s] | go-gb", cartridge.Title, cartridge.Version, cartridge.Publisher, cartridge.CartridgeType))
+	if cart != nil && cart.Title != "" {
+		ebiten.SetWindowTitle(fmt.Sprintf("%s (v%d) - %s [%s] | go-gb", cart.Title, cart.Version, cart.Publisher, cart.CartridgeType))
+	} else if cart != nil && cart.Title == "" {
+		ebiten.SetWindowTitle(fmt.Sprintf("%s [%s] | go-gb", filepath.Base(cfg.ROM), cart.CartridgeType))
 	} else {
-		ebiten.SetWindowTitle(fmt.Sprintf("%s [%s] | go-gb", filepath.Base(cfg.ROM), cartridge.CartridgeType))
+		ebiten.SetWindowTitle("go-gb")
 	}
 
 	return ebiten.RunGame(emu)

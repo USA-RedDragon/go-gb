@@ -80,7 +80,9 @@ func NewSM83(config *config.Config, cartridge *cartridge.Cartridge) *SM83 {
 func (c *SM83) Reset() {
 	c.RAM = [consts.RAMSize]byte{}
 	c.PPU.Reset()
-	c.cartridge.Reset()
+	if c.cartridge != nil {
+		c.cartridge.Reset()
+	}
 	c.HRAM = [consts.HRAMSize]byte{}
 	c.interruptFlag = 0
 	c.interruptEnable = 0
@@ -102,15 +104,23 @@ func (c *SM83) Reset() {
 		}
 		// We need to add the BIOS to the memory map at 0x0000, and only add cartridge ROM banks after that
 		c.memory.AddMMIO(biosData, 0x0000, consts.BIOSSize, true)
-		c.memory.AddMMIO(c.cartridge.ROMBank0[consts.BIOSSize:], 0x0100, consts.ROMBankSize-consts.BIOSSize, true)
+		if c.cartridge != nil {
+			c.memory.AddMMIO(c.cartridge.ROMBank0[consts.BIOSSize:], 0x0100, consts.ROMBankSize-consts.BIOSSize, true)
+		} else {
+			c.memory.AddMMIO(make([]byte, consts.ROMBankSize-consts.BIOSSize)[:], 0x0100, consts.ROMBankSize-consts.BIOSSize, true)
+		}
 	} else {
-		c.memory.AddMMIO(c.cartridge.ROMBank0[:], 0x0, consts.ROMBankSize, true)
+		if c.cartridge != nil {
+			c.memory.AddMMIO(c.cartridge.ROMBank0[:], 0x0, consts.ROMBankSize, true)
+		} else {
+			c.memory.AddMMIO(make([]byte, consts.ROMBankSize)[:], 0x0, consts.ROMBankSize, true)
+		}
 	}
-	if len(c.cartridge.AdditionalROMBanks) > 0 {
+	if c.cartridge != nil && len(c.cartridge.AdditionalROMBanks) > 0 {
 		c.memory.AddMMIO(c.cartridge.AdditionalROMBanks[0][:], 0x4000, consts.ROMBankSize, true)
 	}
 	c.memory.AddMMIO(c.PPU.VRAM[:], 0x8000, consts.VRAMSize, false)
-	if c.cartridge.RAMSize.Bytes() > 0 {
+	if c.cartridge != nil && c.cartridge.RAMSize.Bytes() > 0 {
 		c.memory.AddMMIO(c.cartridge.CartridgeRAMBanks[0][:], 0xA000, consts.CartridgeRAMBankSize, false)
 	}
 	c.memory.AddMMIO(c.RAM[:], 0xC000, consts.RAMSize, false)

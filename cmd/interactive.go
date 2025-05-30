@@ -57,12 +57,15 @@ func runInteractive(cmd *cobra.Command, _ []string) error {
 	}
 	slog.SetDefault(logger)
 
-	cartridge, err := cartridge.NewCartridge(cfg.ROM)
-	if err != nil {
-		return fmt.Errorf("failed to load cartridge: %w", err)
+	var cart *cartridge.Cartridge
+	if cfg.ROM != "" {
+		cart, err = cartridge.NewCartridge(cfg.ROM)
+		if err != nil {
+			return fmt.Errorf("failed to load cartridge: %w", err)
+		}
 	}
 
-	cpu := cpu.NewSM83(cfg, cartridge)
+	cpu := cpu.NewSM83(cfg, cart)
 	// Wait for the user to hit Enter, run the CPU step and repeat until control-C is pressed
 	fmt.Println("Interactive mode started. Press Enter to step through the CPU instructions. Type exit or quit to exit.")
 	for {
