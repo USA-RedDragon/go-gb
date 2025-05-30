@@ -513,6 +513,7 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		if err != nil {
 			panic(fmt.Sprintf("Failed to read address for CALL: %v", err))
 		}
+		c.r_PC += 2
 		slog.Debug("Executing CALL nn", "address", fmt.Sprintf("0x%04X", newloc))
 		// Push the current PC onto the stack
 		err = c.memory.Write16(c.r_SP-2, c.r_PC)
