@@ -198,7 +198,7 @@ func NewCartridge(romPath string) (*Cartridge, error) {
 	copy(c.ROMBank0[:], romData[:consts.ROMBankSize])
 	c.AdditionalROMBanks = make([][consts.ROMBankSize]byte, c.ROMSize.NumberOfBanks()-1)
 
-	for i := 1; i < c.ROMSize.NumberOfBanks()-1; i++ {
+	for i := 1; i <= c.ROMSize.NumberOfBanks()-1; i++ {
 		start := i * consts.ROMBankSize
 		end := start + consts.ROMBankSize
 		if end > len(romData) {
