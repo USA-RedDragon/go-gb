@@ -15,6 +15,25 @@ const (
 	ppuStateVBlank                        // V-Blank state
 )
 
+const (
+	// Bit 0 - BG/Window Display/Priority     (0=Off, 1=On)
+	LCDCBGDisplay uint8 = 1 << iota
+	// Bit 1 - OBJ (Sprite) Display Enable    (0=Off, 1=On)
+	LCDCSpriteDisplayEnable
+	// Bit 2 - OBJ (Sprite) Size              (0=8x8, 1=8x16)
+	LCDCSpriteSize
+	// Bit 3 - BG Tile Map Display Select     (0=9800-9BFF, 1=9C00-9FFF)
+	LCDCBGTileMapDisplaySelect
+	// Bit 4 - BG & Window Tile Data Select   (0=8800-97FF, 1=8000-8FFF)
+	LCDCBGWindowTileDataSelect
+	// Bit 5 - Window Display Enable          (0=Off, 1=On)
+	LCDCWindowDisplayEnable
+	// Bit 6 - Window Tile Map Display Select (0=9800-9BFF, 1=9C00-9FFF)
+	LCDCWindowTileMapDisplayeSelect
+	// Bit 7 - LCD Display Enable             (0=Off, 1=On)
+	LCDCDisplayEnable
+)
+
 type PPU struct {
 	VRAM       [consts.VRAMSize]byte // 8KB of VRAM
 	LCDControl byte                  // LCDC, LCD control register
@@ -35,9 +54,10 @@ type PPU struct {
 	FrameBuffer_A []byte
 	FrameBuffer_B []byte // Frame buffer for double buffering
 
-	state ppuState // Current state of the PPU
-	ticks uint16
-	x     byte // Current X coordinate in the pixel transfer state
+	state    ppuState // Current state of the PPU
+	ticks    uint16
+	x        byte // Current X coordinate in the pixel transfer state
+	disabled bool // Indicates if the PPU is disabled
 }
 
 func NewPPU() *PPU {
@@ -68,9 +88,31 @@ func (ppu *PPU) Reset() {
 	ppu.OBP1 = 0x00
 	ppu.WX = 0x00
 	ppu.WY = 0x00
+	ppu.disabled = true
 }
 
 func (ppu *PPU) Step() {
+	if ppu.disabled {
+		if ppu.LCDControl&LCDCDisplayEnable != 0 {
+			ppu.disabled = false
+			ppu.state = ppuStateOAMSearch
+		} else {
+			return
+		}
+	} else {
+		if ppu.LCDControl&LCDCDisplayEnable == 0 {
+			// Turn screen off and reset PPU state machine.
+			ppu.LY = 0
+			ppu.x = 0
+			ppu.disabled = true
+			return
+		}
+	}
+
+	if ppu.LCDControl&LCDCBGWindowTileDataSelect == 1 {
+		slog.Error("PPU: BG/Window Tile Data Select is set to 1, this is not supported in DMG mode")
+	}
+
 	switch ppu.state {
 	case ppuStateOAMSearch:
 		// TODO: find sprites
