@@ -11,6 +11,7 @@ import (
 	"github.com/USA-RedDragon/go-gb/internal/cpu"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"golang.org/x/image/draw"
 )
 
@@ -87,9 +88,48 @@ func (e *Emulator) convertToScreen(frame [23040]byte) []byte {
 	return e.upscale(originalRender)
 }
 
+func (e *Emulator) updateFrame() {
+	e.frame = e.convertToScreen(e.cpu.RunUntilFrame())
+}
+
 func (e *Emulator) Update() error {
 	start := time.Now()
-	e.frame = e.convertToScreen(e.cpu.RunUntilFrame())
+
+	// Frame stepping
+	if inpututil.IsKeyJustPressed(ebiten.KeyF) {
+		if e.cpu.IsHalted() {
+			e.cpu.Resume()
+		}
+		e.updateFrame()
+		e.cpu.Halt()
+	} else if inpututil.KeyPressDuration(ebiten.KeyF) > 30 {
+		if e.cpu.IsHalted() {
+			e.cpu.Resume()
+		}
+		e.updateFrame()
+		e.cpu.Halt()
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
+		e.cpu.Resume()
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyH) {
+		e.cpu.Halt()
+	}
+
+	if !e.cpu.IsHalted() {
+		e.updateFrame()
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+		halted := e.cpu.IsHalted()
+		e.cpu.Reset()
+		if halted {
+			e.cpu.Halt()
+		}
+	}
+
 	e.frametime = int(time.Since(start).Milliseconds())
 	return nil
 }

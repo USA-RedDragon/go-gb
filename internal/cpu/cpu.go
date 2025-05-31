@@ -330,7 +330,11 @@ func (c *SM83) Halt() {
 	c.halted = true
 }
 
-func (c *SM83) Unhalt() {
+func (c *SM83) IsHalted() bool {
+	return c.halted
+}
+
+func (c *SM83) Resume() {
 	c.halted = false
 }
 
