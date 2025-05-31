@@ -102,11 +102,18 @@ func (e *Emulator) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrint(
 		screen,
 		fmt.Sprintf(
-			"FPS: %0.2f\nFrame Time: %dms\nTPS: %0.2f\nPC: 0x%04X",
+			"FPS: %0.2f\nFrame Time: %dms\nTPS: %0.2f\nPC: 0x%04X\n%s",
 			1000.0/float64(e.frametime),
 			e.frametime,
 			ebiten.ActualTPS(),
 			e.cpu.GetPC(),
+			fmt.Sprintf("Interrupts:\n\tJoy: %t, Serial: %t, Timer: %t, LCD: %t, VBlank: %t\n",
+				e.cpu.GetIntterruptFlag(cpu.JoypadInterrupt),
+				e.cpu.GetIntterruptFlag(cpu.SerialInterrupt),
+				e.cpu.GetIntterruptFlag(cpu.TimerInterrupt),
+				e.cpu.GetIntterruptFlag(cpu.LCDInterrupt),
+				e.cpu.GetIntterruptFlag(cpu.VBlankInterrupt),
+			),
 		),
 	)
 }
