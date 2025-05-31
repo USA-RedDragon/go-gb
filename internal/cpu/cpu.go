@@ -258,8 +258,16 @@ func (c *SM83) Step() int {
 			slog.Debug(c.DebugRegisters())
 		}
 
+		if instruction == nil {
+			mem, err := c.memory.Read8(c.r_PC - 1)
+			if err != nil {
+				panic(fmt.Sprintf("Failed to read memory at PC 0x%04X: %v", c.r_PC-1, err))
+			}
+			panic(fmt.Sprintf("Unknown instruction at PC 0x%04X: 0x%02X", c.r_PC-1, mem))
+		}
+
 		preBank := c.bank
-		steps := c.execute(instruction)
+		instruction.Exec(c)
 		if c.bank != preBank && c.bank != 0 && c.config.BIOS != "" {
 			// Boot rom disabled
 			err := c.memory.RemoveMMIO(0x0000, consts.BIOSSize)
@@ -269,19 +277,19 @@ func (c *SM83) Step() int {
 			c.memory.AddMMIO(c.cartridge.ROMBank0[:consts.BIOSSize], 0x0000, consts.BIOSSize, true)
 		}
 
-		return steps
+		return int(instruction.Cycles)
 	}
 	return 1
 }
 
-func (c *SM83) fetch() byte {
+func (c *SM83) fetch() *OpCode {
 	// Fetch the next instruction from memory at the current PC
 	instruction, err := c.memory.Read8(c.r_PC)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to fetch instruction at PC 0x%04X: %v", c.r_PC, err))
 	}
 	c.r_PC++
-	return instruction
+	return opcodes[instruction]
 }
 
 func (c *SM83) DebugRegisters() string {
