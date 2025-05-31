@@ -8,11 +8,11 @@ const (
 	NewPublisherCapcom                          NewPublisher = "08"
 	NewPublisherElectronicArts                  NewPublisher = "13"
 	NewPublisherHudsonSoft                      NewPublisher = "18"
-	NewPublisherB_AI                            NewPublisher = "19"
+	NewPublisherBAI                             NewPublisher = "19"
 	NewPublisherKSS                             NewPublisher = "20"
 	NewPublisherPlanningOfficeWADA              NewPublisher = "22"
 	NewPublisherPCMComplete                     NewPublisher = "24"
-	NewPublisherSan_X                           NewPublisher = "25"
+	NewPublisherSanX                            NewPublisher = "25"
 	NewPublisherKemco                           NewPublisher = "28"
 	NewPublisherSETACorporation                 NewPublisher = "29"
 	NewPublisherViacom                          NewPublisher = "30"
@@ -22,7 +22,7 @@ const (
 	NewPublisherKonami                          NewPublisher = "34"
 	NewPublisherHectorSoft                      NewPublisher = "35"
 	NewPublisherTaito                           NewPublisher = "37"
-	NewPublisherHudsonSoft_2                    NewPublisher = "38"
+	NewPublisherHudsonSoft2                     NewPublisher = "38"
 	NewPublisherBanpresto                       NewPublisher = "39"
 	NewPublisherUbiSoft                         NewPublisher = "41"
 	NewPublisherAtlus                           NewPublisher = "42"
@@ -34,7 +34,7 @@ const (
 	NewPublisherAcclaimEntertainment            NewPublisher = "51"
 	NewPublisherActivision                      NewPublisher = "52"
 	NewPublisherSammyUSACorporation             NewPublisher = "53"
-	NewPublisherKonami_2                        NewPublisher = "54"
+	NewPublisherKonami2                         NewPublisher = "54"
 	NewPublisherHiTechExpressions               NewPublisher = "55"
 	NewPublisherLJN                             NewPublisher = "56"
 	NewPublisherMatchbox                        NewPublisher = "57"
@@ -43,8 +43,8 @@ const (
 	NewPublisherTitusInteractive                NewPublisher = "60"
 	NewPublisherVirginGamesLtd                  NewPublisher = "61"
 	NewPublisherLucasfilmGames                  NewPublisher = "64"
-	NewPublisherOceanSoftware_2                 NewPublisher = "67"
-	NewPublisherElectronicArts_2                NewPublisher = "69"
+	NewPublisherOceanSoftware2                  NewPublisher = "67"
+	NewPublisherElectronicArts2                 NewPublisher = "69"
 	NewPublisherInfogrames                      NewPublisher = "70"
 	NewPublisherInterplayEntertainment          NewPublisher = "71"
 	NewPublisherBroderbund                      NewPublisher = "72"
@@ -58,13 +58,13 @@ const (
 	NewPublisherTsukudaOriginal                 NewPublisher = "87"
 	NewPublisherChunsoftCo                      NewPublisher = "91"
 	NewPublisherVideoSystem                     NewPublisher = "92"
-	NewPublisherOceanSoftware_3                 NewPublisher = "93"
+	NewPublisherOceanSoftware3                  NewPublisher = "93"
 	NewPublisherVarie                           NewPublisher = "95"
 	NewPublisherYonezawa                        NewPublisher = "96"
 	NewPublisherKaneko                          NewPublisher = "97"
 	NewPublisherPackInVideo                     NewPublisher = "99"
 	NewPublisherBottomUp                        NewPublisher = "9H"
-	NewPublisherKonami_Yu_Gi_Oh                 NewPublisher = "A4"
+	NewPublisherKonamiYuGiOh                    NewPublisher = "A4"
 	NewPublisherMTO                             NewPublisher = "BL"
 	NewPublisherKodansha                        NewPublisher = "DK"
 )
@@ -81,7 +81,7 @@ func (p NewPublisher) String() string {
 		return "Electronic Arts"
 	case NewPublisherHudsonSoft:
 		return "Hudson Soft"
-	case NewPublisherB_AI:
+	case NewPublisherBAI:
 		return "B-AI"
 	case NewPublisherKSS:
 		return "KSS"
@@ -89,7 +89,7 @@ func (p NewPublisher) String() string {
 		return "Planning Office WADA"
 	case NewPublisherPCMComplete:
 		return "PCM Complete"
-	case NewPublisherSan_X:
+	case NewPublisherSanX:
 		return "San-X"
 	case NewPublisherKemco:
 		return "Kemco"
@@ -109,7 +109,7 @@ func (p NewPublisher) String() string {
 		return "Hector Soft"
 	case NewPublisherTaito:
 		return "Taito"
-	case NewPublisherHudsonSoft_2:
+	case NewPublisherHudsonSoft2:
 		return "Hudson Soft"
 	case NewPublisherBanpresto:
 		return "Banpresto"
@@ -133,7 +133,7 @@ func (p NewPublisher) String() string {
 		return "Activision"
 	case NewPublisherSammyUSACorporation:
 		return "Sammy USA Corporation"
-	case NewPublisherKonami_2:
+	case NewPublisherKonami2:
 		return "Konami"
 	case NewPublisherHiTechExpressions:
 		return "Hi Tech Expressions"
@@ -151,9 +151,9 @@ func (p NewPublisher) String() string {
 		return "Virgin Games Ltd."
 	case NewPublisherLucasfilmGames:
 		return "Lucasfilm Games"
-	case NewPublisherOceanSoftware_2:
+	case NewPublisherOceanSoftware2:
 		return "Ocean Software"
-	case NewPublisherElectronicArts_2:
+	case NewPublisherElectronicArts2:
 		return "Electronic Arts"
 	case NewPublisherInfogrames:
 		return "Infogrames"
@@ -181,7 +181,7 @@ func (p NewPublisher) String() string {
 		return "Chunsoft Co."
 	case NewPublisherVideoSystem:
 		return "Video System"
-	case NewPublisherOceanSoftware_3:
+	case NewPublisherOceanSoftware3:
 		return "Ocean Software"
 	case NewPublisherVarie:
 		return "Varie"
@@ -193,7 +193,7 @@ func (p NewPublisher) String() string {
 		return "Pack-In-Video"
 	case NewPublisherBottomUp:
 		return "Bottom-Up"
-	case NewPublisherKonami_Yu_Gi_Oh:
+	case NewPublisherKonamiYuGiOh:
 		return "Konami (Yu-Gi-Oh!)"
 	case NewPublisherMTO:
 		return "MTO"

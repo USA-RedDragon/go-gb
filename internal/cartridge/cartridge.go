@@ -175,7 +175,7 @@ type Cartridge struct {
 	CGB                bool
 	CGBOnly            bool
 	Version            uint8
-	CartridgeType      CartridgeType
+	CartridgeType      Type
 	Japanese           bool
 }
 
@@ -233,7 +233,7 @@ func NewCartridge(romPath string) (*Cartridge, error) {
 
 	c.Japanese = c.ROMBank0[0x014A] == 0x00
 
-	c.CartridgeType = CartridgeType(c.ROMBank0[0x0147])
+	c.CartridgeType = Type(c.ROMBank0[0x0147])
 
 	return c, nil
 }

@@ -40,18 +40,18 @@ type SM83 struct {
 	TMA             uint8 // Timer Modulo register, used for the timer
 	OAMDMA          byte  // Object Attribute Memory DMA register, used for sprite data transfer
 
-	r_A byte // A, accumulator register
-	r_F byte // F, flags register
-	r_B byte // B
-	r_C byte // C
-	r_D byte // D
-	r_E byte // E
-	r_H byte // H
-	r_L byte // L
+	rA byte // A, accumulator register
+	rF byte // F, flags register
+	rB byte // B
+	rC byte // C
+	rD byte // D
+	rE byte // E
+	rH byte // H
+	rL byte // L
 
 	// 16-bit registers
-	r_PC uint16 // PC (Program Counter)
-	r_SP uint16 // SP (Stack Pointer)
+	rPC uint16 // PC (Program Counter)
+	rSP uint16 // SP (Stack Pointer)
 }
 
 func NewSM83(config *config.Config, cartridge *cartridge.Cartridge) *SM83 {
@@ -106,13 +106,13 @@ func (c *SM83) Reset() {
 		if c.cartridge != nil {
 			c.memory.AddMMIO(c.cartridge.ROMBank0[consts.BIOSSize:], 0x0100, consts.ROMBankSize-consts.BIOSSize, true)
 		} else {
-			c.memory.AddMMIO(bytes.Repeat([]byte{0xff}, consts.ROMBankSize-consts.BIOSSize)[:], 0x0100, consts.ROMBankSize-consts.BIOSSize, true)
+			c.memory.AddMMIO(bytes.Repeat([]byte{0xff}, consts.ROMBankSize-consts.BIOSSize), 0x0100, consts.ROMBankSize-consts.BIOSSize, true)
 		}
 	} else {
 		if c.cartridge != nil {
 			c.memory.AddMMIO(c.cartridge.ROMBank0[:], 0x0, consts.ROMBankSize, true)
 		} else {
-			c.memory.AddMMIO(bytes.Repeat([]byte{0xff}, consts.ROMBankSize)[:], 0x0, consts.ROMBankSize, true)
+			c.memory.AddMMIO(bytes.Repeat([]byte{0xff}, consts.ROMBankSize), 0x0, consts.ROMBankSize, true)
 		}
 	}
 	if c.cartridge != nil && len(c.cartridge.AdditionalROMBanks) > 0 {
@@ -120,11 +120,11 @@ func (c *SM83) Reset() {
 	}
 	c.memory.AddMMIO(c.PPU.VRAM[:], 0x8000, consts.VRAMSize, false)
 	if c.cartridge != nil && c.cartridge.RAMSize.Bytes() > 0 {
-		c.memory.AddMMIO(c.cartridge.CartridgeRAMBanks[0][:], 0xA000, consts.CartridgeRAMBankSize, false)
+		c.memory.AddMMIO(c.cartridge.CartridgeRAMBanks[0], 0xA000, consts.CartridgeRAMBankSize, false)
 	}
 	c.memory.AddMMIO(c.RAM[:], 0xC000, consts.RAMSize, false)
 	c.memory.AddMMIO(c.PPU.OAM[:], 0xFE00, consts.OAMSize, false)
-	c.memory.AddMMIO(make([]byte, consts.ProhibitedSize)[:], 0xFEA0, consts.ProhibitedSize, false)
+	c.memory.AddMMIO(make([]byte, consts.ProhibitedSize), 0xFEA0, consts.ProhibitedSize, false)
 	c.memory.AddMMIOByte(&c.Input.JOYP, 0xFF00, true)
 	c.memory.AddMMIOByte(&c.serialData, 0xFF01, false)
 	c.memory.AddMMIOByte(&c.serialControl, 0xFF02, false)
@@ -163,38 +163,38 @@ func (c *SM83) Reset() {
 
 	if c.config.BIOS != "" {
 		c.ime = false
-		c.r_A = 0
-		c.r_F = 0
-		c.r_B = 0
-		c.r_C = 0
-		c.r_D = 0
-		c.r_E = 0
-		c.r_H = 0
-		c.r_L = 0
-		c.r_PC = 0x0
+		c.rA = 0
+		c.rF = 0
+		c.rB = 0
+		c.rC = 0
+		c.rD = 0
+		c.rE = 0
+		c.rH = 0
+		c.rL = 0
+		c.rPC = 0x0
 	} else {
 		c.ime = false
-		c.r_A = 0x01
-		c.r_F = byte(ZeroFlag)
+		c.rA = 0x01
+		c.rF = byte(ZeroFlag)
 		if c.cartridge.ROMBank0[0x014D] == 0x00 {
 			// Header checksum, if zero the Carry and Half Carry flags are set
-			c.r_F |= byte(CarryFlag) | byte(HalfCarryFlag)
+			c.rF |= byte(CarryFlag) | byte(HalfCarryFlag)
 		}
-		c.r_B = 0
-		c.r_C = 0x13
-		c.r_D = 0
-		c.r_E = 0xD8
-		c.r_H = 0x01
-		c.r_L = 0x4D
-		c.r_PC = 0x0100 // Program Counter starts at 0x0100
+		c.rB = 0
+		c.rC = 0x13
+		c.rD = 0
+		c.rE = 0xD8
+		c.rH = 0x01
+		c.rL = 0x4D
+		c.rPC = 0x0100 // Program Counter starts at 0x0100
 	}
-	c.r_SP = 0xFFFE
+	c.rSP = 0xFFFE
 	c.halted = false
 	c.exit = false
 }
 
 func (c *SM83) GetPC() uint16 {
-	return c.r_PC
+	return c.rPC
 }
 
 func (c *SM83) Step() int {
@@ -228,23 +228,23 @@ func (c *SM83) Step() int {
 				c.ime = false // Disable IME to prevent re-entrancy
 
 				// Push PC onto stack
-				c.r_SP -= 2
-				err := c.memory.Write16(c.r_SP, c.r_PC)
+				c.rSP -= 2
+				err := c.memory.Write16(c.rSP, c.rPC)
 				if err != nil {
 					panic(fmt.Sprintf("Failed to push PC onto stack: %v", err))
 				}
 
 				switch interrupt {
 				case impls.JoypadInterrupt:
-					c.r_PC = 0x0060 // Joypad interrupt vector
+					c.rPC = 0x0060 // Joypad interrupt vector
 				case impls.SerialInterrupt:
-					c.r_PC = 0x0058 // Serial interrupt vector
+					c.rPC = 0x0058 // Serial interrupt vector
 				case impls.TimerInterrupt:
-					c.r_PC = 0x0050 // Timer interrupt vector
+					c.rPC = 0x0050 // Timer interrupt vector
 				case impls.LCDInterrupt:
-					c.r_PC = 0x0048 // LCD interrupt vector
+					c.rPC = 0x0048 // LCD interrupt vector
 				case impls.VBlankInterrupt:
-					c.r_PC = 0x0040 // VBlank interrupt vector
+					c.rPC = 0x0040 // VBlank interrupt vector
 				}
 				c.SetInterruptFlag(interrupt, false) // Clear the interrupt flag
 			}
@@ -259,11 +259,11 @@ func (c *SM83) Step() int {
 		}
 
 		if instruction == nil {
-			mem, err := c.memory.Read8(c.r_PC - 1)
+			mem, err := c.memory.Read8(c.rPC - 1)
 			if err != nil {
-				panic(fmt.Sprintf("Failed to read memory at PC 0x%04X: %v", c.r_PC-1, err))
+				panic(fmt.Sprintf("Failed to read memory at PC 0x%04X: %v", c.rPC-1, err))
 			}
-			panic(fmt.Sprintf("Unknown instruction at PC 0x%04X: 0x%02X", c.r_PC-1, mem))
+			panic(fmt.Sprintf("Unknown instruction at PC 0x%04X: 0x%02X", c.rPC-1, mem))
 		}
 
 		preBank := c.bank
@@ -284,22 +284,22 @@ func (c *SM83) Step() int {
 
 func (c *SM83) fetch() *OpCode {
 	// Fetch the next instruction from memory at the current PC
-	instruction, err := c.memory.Read8(c.r_PC)
+	instruction, err := c.memory.Read8(c.rPC)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to fetch instruction at PC 0x%04X: %v", c.r_PC, err))
+		panic(fmt.Sprintf("Failed to fetch instruction at PC 0x%04X: %v", c.rPC, err))
 	}
-	c.r_PC++
+	c.rPC++
 	return opcodes[instruction]
 }
 
 func (c *SM83) DebugRegisters() string {
 	var ret = "\n"
 	ret += fmt.Sprintf("IE: 0x%02X\n", c.interruptEnable)
-	ret += fmt.Sprintf(" A: 0x%02X\t  F: 0x%02X\n", c.r_A, c.r_F)
-	ret += fmt.Sprintf(" B: 0x%02X\t  C: 0x%02X\n", c.r_B, c.r_C)
-	ret += fmt.Sprintf(" D: 0x%02X\t  E: 0x%02X\n", c.r_D, c.r_E)
-	ret += fmt.Sprintf(" H: 0x%02X\t  L: 0x%02X\n", c.r_H, c.r_L)
-	ret += fmt.Sprintf("PC: 0x%04X\t SP: 0x%04X\n", c.r_PC, c.r_SP)
+	ret += fmt.Sprintf(" A: 0x%02X\t  F: 0x%02X\n", c.rA, c.rF)
+	ret += fmt.Sprintf(" B: 0x%02X\t  C: 0x%02X\n", c.rB, c.rC)
+	ret += fmt.Sprintf(" D: 0x%02X\t  E: 0x%02X\n", c.rD, c.rE)
+	ret += fmt.Sprintf(" H: 0x%02X\t  L: 0x%02X\n", c.rH, c.rL)
+	ret += fmt.Sprintf("PC: 0x%04X\t SP: 0x%04X\n", c.rPC, c.rSP)
 	ret += fmt.Sprintf("Flags: C: %t, H: %t, N: %t, Z: %t\n",
 		c.GetFlag(CarryFlag),
 		c.GetFlag(HalfCarryFlag),
@@ -359,14 +359,14 @@ const (
 
 func (c *SM83) SetFlag(flag Flag, val bool) {
 	if val {
-		c.r_F |= byte(flag)
+		c.rF |= byte(flag)
 	} else {
-		c.r_F &^= byte(flag)
+		c.rF &^= byte(flag)
 	}
 }
 
 func (c *SM83) GetFlag(flag Flag) bool {
-	return c.r_F&byte(flag) != 0
+	return c.rF&byte(flag) != 0
 }
 
 func (c *SM83) Halt() {

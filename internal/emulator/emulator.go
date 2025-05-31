@@ -46,8 +46,7 @@ func (e *Emulator) upscale(render *image.RGBA) []byte {
 }
 
 func (e *Emulator) convertToScreen(frame [23040]byte) []byte {
-	var originalRender *image.RGBA
-	originalRender = image.NewRGBA(image.Rect(0, 0, 160, 144))
+	originalRender := image.NewRGBA(image.Rect(0, 0, 160, 144))
 
 	// The input frame is expected to be in 2BPP format, where each pixel is represented by 2 bits.
 	for i := 0; i < len(frame); i++ {
