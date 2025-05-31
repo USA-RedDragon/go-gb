@@ -1,24 +1,24 @@
 package cpu
 
-func ldRegisterRegister(c *SM83, dst, src *byte) {
+func ldRegisterRegister(_ *SM83, dst, src *byte) {
 	*dst = *src
 }
 
 func ldRegisterImm(c *SM83, dst *byte) {
 	var err error
-	*dst, err = c.memory.Read8(c.r_PC)
+	*dst, err = c.memory.Read8(c.rPC)
 	if err != nil {
 		panic(err)
 	}
-	c.r_PC++
+	c.rPC++
 }
 
 func ldCombRegister16Imm(c *SM83, dstTop *byte, dstBottom *byte) {
-	combReg, err := c.memory.Read16(c.r_PC)
+	combReg, err := c.memory.Read16(c.rPC)
 	if err != nil {
 		panic(err)
 	}
-	c.r_PC += 2
+	c.rPC += 2
 	*dstTop = byte(combReg >> 8)
 	*dstBottom = byte(combReg & 0xFF)
 }
@@ -41,11 +41,11 @@ func ldMemCombRegister(c *SM83, addrTop *byte, addrBottom *byte, src *byte) {
 }
 
 func ldMem16Register(c *SM83, src *uint16) {
-	addr, err := c.memory.Read16(c.r_PC)
+	addr, err := c.memory.Read16(c.rPC)
 	if err != nil {
 		panic(err)
 	}
-	c.r_PC += 2
+	c.rPC += 2
 	*src, err = c.memory.Read16(addr)
 	if err != nil {
 		panic(err)
@@ -108,24 +108,24 @@ func ldMemCombRegisterDec(c *SM83, addrTop *byte, addrBottom *byte, src *byte) {
 
 func ld16Register16Imm(c *SM83, dst *uint16) {
 	var err error
-	*dst, err = c.memory.Read16(c.r_PC)
+	*dst, err = c.memory.Read16(c.rPC)
 	if err != nil {
 		panic(err)
 	}
-	c.r_PC += 2
+	c.rPC += 2
 }
 
-func ld16RegCombRegister(c *SM83, dst *uint16, srcTop *byte, srcBottom *byte) {
+func ld16RegCombRegister(_ *SM83, dst *uint16, srcTop *byte, srcBottom *byte) {
 	*dst = uint16(*srcTop)<<8 | uint16(*srcBottom)
 }
 
 func ldMemCombImm(c *SM83, addrTop *byte, addrBottom *byte) {
 	addr := uint16(*addrTop)<<8 | uint16(*addrBottom)
-	value, err := c.memory.Read8(c.r_PC)
+	value, err := c.memory.Read8(c.rPC)
 	if err != nil {
 		panic(err)
 	}
-	c.r_PC++
+	c.rPC++
 	err = c.memory.Write8(addr, value)
 	if err != nil {
 		panic(err)
@@ -134,11 +134,11 @@ func ldMemCombImm(c *SM83, addrTop *byte, addrBottom *byte) {
 
 func popRegisterPair(c *SM83, dstTop *byte, dstBottom *byte) {
 	// Read the value from the stack
-	addr, err := c.memory.Read16(c.r_SP)
+	addr, err := c.memory.Read16(c.rSP)
 	if err != nil {
 		panic(err)
 	}
-	c.r_SP += 2 // Increment stack pointer
+	c.rSP += 2 // Increment stack pointer
 
 	// Set the destination registers
 	*dstTop = byte(addr >> 8)
@@ -150,9 +150,9 @@ func pushRegisterPair(c *SM83, srcTop *byte, srcBottom *byte) {
 	addr := uint16(*srcTop)<<8 | uint16(*srcBottom)
 
 	// Write the value to the stack
-	err := c.memory.Write16(c.r_SP-2, addr)
+	err := c.memory.Write16(c.rSP-2, addr)
 	if err != nil {
 		panic(err)
 	}
-	c.r_SP -= 2 // Decrement stack pointer
+	c.rSP -= 2 // Decrement stack pointer
 }

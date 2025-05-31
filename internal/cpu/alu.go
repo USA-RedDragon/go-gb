@@ -14,7 +14,7 @@ func decRegister(cpu *SM83, register *byte) {
 	cpu.SetFlag(HalfCarryFlag, (*register&0x0F) == 0x0F)
 }
 
-func incCombRegister(cpu *SM83, top *byte, bottom *byte) {
+func incCombRegister(_ *SM83, top *byte, bottom *byte) {
 	if *bottom == 0xFF {
 		*bottom = 0x00
 		*top++
@@ -23,7 +23,7 @@ func incCombRegister(cpu *SM83, top *byte, bottom *byte) {
 	}
 }
 
-func decCombRegister(cpu *SM83, top *byte, bottom *byte) {
+func decCombRegister(_ *SM83, top *byte, bottom *byte) {
 	if *bottom == 0x00 {
 		*bottom = 0xFF
 		*top--
@@ -55,9 +55,9 @@ func rla(cpu *SM83) {
 	} else {
 		carry = 0
 	}
-	cpu.SetFlag(CarryFlag, (cpu.r_A&0x80) != 0)
-	cpu.r_A = (cpu.r_A << 1) | carry
-	cpu.SetFlag(ZeroFlag, cpu.r_A == 0)
+	cpu.SetFlag(CarryFlag, (cpu.rA&0x80) != 0)
+	cpu.rA = (cpu.rA << 1) | carry
+	cpu.SetFlag(ZeroFlag, cpu.rA == 0)
 	cpu.SetFlag(NegativeFlag, false)
 	cpu.SetFlag(HalfCarryFlag, false)
 }
@@ -77,27 +77,27 @@ func addCombRegisterCombRegister(cpu *SM83, dstTop *byte, dstBottom *byte, srcTo
 func daa(cpu *SM83) {
 	correction := byte(0)
 
-	if cpu.GetFlag(HalfCarryFlag) || (!cpu.GetFlag(NegativeFlag) && (cpu.r_A&0xf) > 9) {
+	if cpu.GetFlag(HalfCarryFlag) || (!cpu.GetFlag(NegativeFlag) && (cpu.rA&0xf) > 9) {
 		correction |= 0x6
 	}
 
-	if cpu.GetFlag(CarryFlag) || (!cpu.GetFlag(NegativeFlag) && cpu.r_A > 0x99) {
+	if cpu.GetFlag(CarryFlag) || (!cpu.GetFlag(NegativeFlag) && cpu.rA > 0x99) {
 		correction |= 0x60
 		cpu.SetFlag(CarryFlag, true)
 	}
 
 	if cpu.GetFlag(NegativeFlag) {
-		cpu.r_A -= correction
+		cpu.rA -= correction
 	} else {
-		cpu.r_A += correction
+		cpu.rA += correction
 	}
 
-	cpu.SetFlag(ZeroFlag, cpu.r_A == 0)
+	cpu.SetFlag(ZeroFlag, cpu.rA == 0)
 	cpu.SetFlag(HalfCarryFlag, false)
 }
 
 func cpl(cpu *SM83) {
-	cpu.r_A = ^cpu.r_A
+	cpu.rA = ^cpu.rA
 
 	cpu.SetFlag(NegativeFlag, true)
 	cpu.SetFlag(HalfCarryFlag, true)
@@ -283,11 +283,11 @@ func cpMemComb(cpu *SM83, dst *byte, addrTop *byte, addrBottom *byte) {
 }
 
 func cpImmediate(cpu *SM83, dst *byte) {
-	value, err := cpu.memory.Read8(cpu.r_PC)
+	value, err := cpu.memory.Read8(cpu.rPC)
 	if err != nil {
 		panic(err)
 	}
-	cpu.r_PC++ // Increment program counter
+	cpu.rPC++ // Increment program counter
 
 	result := uint16(*dst) - uint16(value)
 	cpu.SetFlag(ZeroFlag, result&0xFF == 0)
@@ -297,11 +297,11 @@ func cpImmediate(cpu *SM83, dst *byte) {
 }
 
 func addImmediate(cpu *SM83, dst *byte) {
-	value, err := cpu.memory.Read8(cpu.r_PC)
+	value, err := cpu.memory.Read8(cpu.rPC)
 	if err != nil {
 		panic(err)
 	}
-	cpu.r_PC++ // Increment program counter
+	cpu.rPC++ // Increment program counter
 
 	result := uint16(*dst) + uint16(value)
 	cpu.SetFlag(ZeroFlag, result&0xFF == 0)
@@ -312,11 +312,11 @@ func addImmediate(cpu *SM83, dst *byte) {
 }
 
 func subImmediate(cpu *SM83, dst *byte) {
-	value, err := cpu.memory.Read8(cpu.r_PC)
+	value, err := cpu.memory.Read8(cpu.rPC)
 	if err != nil {
 		panic(err)
 	}
-	cpu.r_PC++ // Increment program counter
+	cpu.rPC++ // Increment program counter
 
 	result := uint16(*dst) - uint16(value)
 	cpu.SetFlag(ZeroFlag, result&0xFF == 0)
@@ -327,11 +327,11 @@ func subImmediate(cpu *SM83, dst *byte) {
 }
 
 func andImmediate(cpu *SM83, dst *byte) {
-	value, err := cpu.memory.Read8(cpu.r_PC)
+	value, err := cpu.memory.Read8(cpu.rPC)
 	if err != nil {
 		panic(err)
 	}
-	cpu.r_PC++ // Increment program counter
+	cpu.rPC++ // Increment program counter
 
 	*dst &= value
 	cpu.SetFlag(ZeroFlag, *dst == 0)
@@ -341,31 +341,31 @@ func andImmediate(cpu *SM83, dst *byte) {
 }
 
 func addSPImmediate(cpu *SM83) {
-	offset, err := cpu.memory.Read8(cpu.r_PC)
+	offset, err := cpu.memory.Read8(cpu.rPC)
 	if err != nil {
 		panic(err)
 	}
-	cpu.r_PC++ // Increment program counter
+	cpu.rPC++ // Increment program counter
 
 	if offset&0x80 != 0 {
 		offset = -((^offset + 1) & 0xFF) // Convert to signed
 	}
 
-	result := uint16(cpu.r_SP) + uint16(offset)
+	result := cpu.rSP + uint16(offset)
 	cpu.SetFlag(ZeroFlag, false)
 	cpu.SetFlag(NegativeFlag, false)
-	cpu.SetFlag(HalfCarryFlag, (cpu.r_SP&0x0FFF+uint16(offset)&0x0FFF) > 0x0FFF)
+	cpu.SetFlag(HalfCarryFlag, (cpu.rSP&0x0FFF+uint16(offset)&0x0FFF) > 0x0FFF)
 	cpu.SetFlag(CarryFlag, result < 0 || result > 0xFFFF)
 
-	cpu.r_SP = uint16(result & 0xFFFF)
+	cpu.rSP = result & 0xFFFF
 }
 
 func xorImmediate(cpu *SM83, dst *byte) {
-	value, err := cpu.memory.Read8(cpu.r_PC)
+	value, err := cpu.memory.Read8(cpu.rPC)
 	if err != nil {
 		panic(err)
 	}
-	cpu.r_PC++ // Increment program counter
+	cpu.rPC++ // Increment program counter
 
 	*dst ^= value
 	cpu.SetFlag(ZeroFlag, *dst == 0)
@@ -375,11 +375,11 @@ func xorImmediate(cpu *SM83, dst *byte) {
 }
 
 func orImmediate(cpu *SM83, dst *byte) {
-	value, err := cpu.memory.Read8(cpu.r_PC)
+	value, err := cpu.memory.Read8(cpu.rPC)
 	if err != nil {
 		panic(err)
 	}
-	cpu.r_PC++ // Increment program counter
+	cpu.rPC++ // Increment program counter
 
 	*dst |= value
 	cpu.SetFlag(ZeroFlag, *dst == 0)
