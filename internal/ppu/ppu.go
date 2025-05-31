@@ -170,7 +170,7 @@ func (ppu *PPU) Step() {
 		}
 	case ppuStateHBlank:
 		// no-ops
-		if ppu.ticks == 456 {
+		if ppu.ticks == 339 {
 			ppu.ticks = 0
 			ppu.LY++
 			if ppu.LY == 144 {
@@ -186,7 +186,8 @@ func (ppu *PPU) Step() {
 		}
 	case ppuStateVBlank:
 		// no-ops
-		if ppu.ticks == 456 {
+		slog.Debug("PPU: VBlank tick", "LY", ppu.LY, "ticks", ppu.ticks)
+		if ppu.ticks == 4560 {
 			ppu.ticks = 0
 			ppu.LY++
 			if ppu.LY == 153 {
@@ -195,7 +196,6 @@ func (ppu *PPU) Step() {
 				ppu.state = ppuStateOAMSearch
 			}
 		}
-		ppu.state = ppuStateOAMSearch
 	default:
 		slog.Error("Unknown PPU state encountered", "state", ppu.state)
 	}

@@ -41,11 +41,12 @@ func (f *Fetcher) Reset() {
 }
 
 func (f *Fetcher) Step() {
-	tileLine := f.PPU.LY % 8
+	y := f.PPU.LY + f.PPU.SCY
+	tileLine := y % 8
 	switch f.state {
 	case fetcherStateTileNumber:
 		// Fetch the tile number from VRAM
-		mapAddr := consts.BackgroundMapOffset + (uint16(f.PPU.LY/8) * 32)
+		mapAddr := consts.BackgroundMapOffset + (uint16(y/8) * 32)
 		f.tileNum = f.PPU.VRAM[uint16(f.tileIndex)+mapAddr]
 		f.state = fetcherStateTileDataLow
 	case fetcherStateTileDataLow:
