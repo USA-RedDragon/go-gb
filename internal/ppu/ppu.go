@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/USA-RedDragon/go-gb/internal/consts"
+	"github.com/USA-RedDragon/go-gb/internal/impls"
 )
 
 type ppuState uint8
@@ -49,6 +50,7 @@ type PPU struct {
 	OBP1       byte                  // OBP1, object palette 1 data
 	OAM        [consts.OAMSize]byte  // OAM, Object Attribute Memory
 	Fetcher    *Fetcher              // Fetcher for pixel data
+	cpu        impls.CPU             // Reference to the CPU for interrupt handling
 
 	HaveFrame     bool
 	FrameBuffer_A [consts.FrameBufferSize]byte
@@ -60,8 +62,10 @@ type PPU struct {
 	disabled bool // Indicates if the PPU is disabled
 }
 
-func NewPPU() *PPU {
-	ppu := &PPU{}
+func NewPPU(cpu impls.CPU) *PPU {
+	ppu := &PPU{
+		cpu: cpu,
+	}
 	ppu.Fetcher = NewFetcher(ppu)
 	ppu.Reset()
 	return ppu
@@ -185,6 +189,7 @@ func (ppu *PPU) Step() {
 				ppu.FrameBuffer_A = [consts.FrameBufferSize]byte{}
 				ppu.HaveFrame = true
 				ppu.state = ppuStateVBlank
+				ppu.cpu.SetInterruptFlag(impls.VBlankInterrupt, true)
 			} else {
 				slog.Debug("PPU: HBlank complete", "LY", ppu.LY, "ticks", ppu.ticks)
 				ppu.state = ppuStateOAMSearch

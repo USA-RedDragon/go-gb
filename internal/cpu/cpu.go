@@ -10,6 +10,7 @@ import (
 	"github.com/USA-RedDragon/go-gb/internal/cartridge"
 	"github.com/USA-RedDragon/go-gb/internal/config"
 	"github.com/USA-RedDragon/go-gb/internal/consts"
+	"github.com/USA-RedDragon/go-gb/internal/impls"
 	"github.com/USA-RedDragon/go-gb/internal/input"
 	"github.com/USA-RedDragon/go-gb/internal/memory"
 	"github.com/USA-RedDragon/go-gb/internal/ppu"
@@ -57,10 +58,10 @@ func NewSM83(config *config.Config, cartridge *cartridge.Cartridge) *SM83 {
 		config:    config,
 		memory:    memory.MMIO{},
 		cartridge: cartridge,
-		PPU:       ppu.NewPPU(),
 		Sound:     sound.NewSound(),
 		Input:     input.NewInput(),
 	}
+	cpu.PPU = ppu.NewPPU(cpu)
 
 	cpu.Reset()
 
@@ -196,6 +197,57 @@ func (c *SM83) GetPC() uint16 {
 
 func (c *SM83) Step() int {
 	if !c.halted {
+		if c.ime && c.interruptFlag != 0 {
+			// Handle interrupts if IME is set and there are pending interrupts
+			var interrupt impls.Interrupt
+			if c.GetInterruptEnableFlag(impls.JoypadInterrupt) && c.GetInterruptFlag(impls.JoypadInterrupt) {
+				slog.Info("Joypad interrupt triggered")
+				interrupt = impls.JoypadInterrupt
+			} else if c.GetInterruptEnableFlag(impls.SerialInterrupt) && c.GetInterruptFlag(impls.SerialInterrupt) {
+				slog.Info("Serial interrupt triggered")
+				interrupt = impls.SerialInterrupt
+			} else if c.GetInterruptEnableFlag(impls.TimerInterrupt) && c.GetInterruptFlag(impls.TimerInterrupt) {
+				slog.Info("Timer interrupt triggered")
+				interrupt = impls.TimerInterrupt
+			} else if c.GetInterruptEnableFlag(impls.LCDInterrupt) && c.GetInterruptFlag(impls.LCDInterrupt) {
+				slog.Info("LCD interrupt triggered")
+				interrupt = impls.LCDInterrupt
+			} else if c.GetInterruptEnableFlag(impls.VBlankInterrupt) && c.GetInterruptFlag(impls.VBlankInterrupt) {
+				slog.Info("VBlank interrupt triggered")
+				interrupt = impls.VBlankInterrupt
+			}
+
+			if interrupt != 0 {
+				c.SetFlag(NegativeFlag, false)
+				c.SetFlag(HalfCarryFlag, false)
+				c.SetFlag(CarryFlag, false)
+				c.SetFlag(ZeroFlag, false)
+
+				c.ime = false // Disable IME to prevent re-entrancy
+
+				// Push PC onto stack
+				c.r_SP -= 2
+				err := c.memory.Write16(c.r_SP, c.r_PC)
+				if err != nil {
+					panic(fmt.Sprintf("Failed to push PC onto stack: %v", err))
+				}
+
+				switch interrupt {
+				case impls.JoypadInterrupt:
+					c.r_PC = 0x0060 // Joypad interrupt vector
+				case impls.SerialInterrupt:
+					c.r_PC = 0x0058 // Serial interrupt vector
+				case impls.TimerInterrupt:
+					c.r_PC = 0x0050 // Timer interrupt vector
+				case impls.LCDInterrupt:
+					c.r_PC = 0x0048 // LCD interrupt vector
+				case impls.VBlankInterrupt:
+					c.r_PC = 0x0040 // VBlank interrupt vector
+				}
+				c.SetInterruptFlag(interrupt, false) // Clear the interrupt flag
+			}
+		}
+
 		instruction := c.fetch()
 
 		// c.DebugRegisters() is expensive in the hot path
@@ -230,25 +282,6 @@ func (c *SM83) fetch() byte {
 	return instruction
 }
 
-type InterruptFlag uint8
-
-const (
-	// Bit 4 is Joypad
-	JoypadInterrupt InterruptFlag = 1 << 4
-	// Bit 3 is Serial
-	SerialInterrupt InterruptFlag = 1 << 3
-	// Bit 2 is Timer
-	TimerInterrupt InterruptFlag = 1 << 2
-	// Bit 1 is LCD
-	LCDInterrupt InterruptFlag = 1 << 1
-	// Bit 0 is VBlank
-	VBlankInterrupt InterruptFlag = 1 << 0
-)
-
-func (c *SM83) GetIntterruptFlag(flag InterruptFlag) bool {
-	return c.interruptFlag&byte(flag) != 0
-}
-
 func (c *SM83) DebugRegisters() string {
 	var ret = "\n"
 	ret += fmt.Sprintf("IE: 0x%02X\n", c.interruptEnable)
@@ -264,11 +297,11 @@ func (c *SM83) DebugRegisters() string {
 		c.GetFlag(ZeroFlag),
 	)
 	ret += fmt.Sprintf("Interrupts: Joy: %t, Serial: %t, Timer: %t, LCD: %t, VBlank: %t\n",
-		c.GetIntterruptFlag(JoypadInterrupt),
-		c.GetIntterruptFlag(SerialInterrupt),
-		c.GetIntterruptFlag(TimerInterrupt),
-		c.GetIntterruptFlag(LCDInterrupt),
-		c.GetIntterruptFlag(VBlankInterrupt),
+		c.GetInterruptEnableFlag(impls.JoypadInterrupt),
+		c.GetInterruptEnableFlag(impls.SerialInterrupt),
+		c.GetInterruptEnableFlag(impls.TimerInterrupt),
+		c.GetInterruptEnableFlag(impls.LCDInterrupt),
+		c.GetInterruptEnableFlag(impls.VBlankInterrupt),
 	)
 
 	return ret

@@ -9,6 +9,7 @@ import (
 	"github.com/USA-RedDragon/go-gb/internal/cartridge"
 	"github.com/USA-RedDragon/go-gb/internal/config"
 	"github.com/USA-RedDragon/go-gb/internal/cpu"
+	"github.com/USA-RedDragon/go-gb/internal/impls"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -148,11 +149,11 @@ func (e *Emulator) Draw(screen *ebiten.Image) {
 			ebiten.ActualTPS(),
 			e.cpu.GetPC(),
 			fmt.Sprintf("Interrupts:\n\tJoy: %t, Serial: %t, Timer: %t, LCD: %t, VBlank: %t\n",
-				e.cpu.GetIntterruptFlag(cpu.JoypadInterrupt),
-				e.cpu.GetIntterruptFlag(cpu.SerialInterrupt),
-				e.cpu.GetIntterruptFlag(cpu.TimerInterrupt),
-				e.cpu.GetIntterruptFlag(cpu.LCDInterrupt),
-				e.cpu.GetIntterruptFlag(cpu.VBlankInterrupt),
+				e.cpu.GetInterruptEnableFlag(impls.JoypadInterrupt),
+				e.cpu.GetInterruptEnableFlag(impls.SerialInterrupt),
+				e.cpu.GetInterruptEnableFlag(impls.TimerInterrupt),
+				e.cpu.GetInterruptEnableFlag(impls.LCDInterrupt),
+				e.cpu.GetInterruptEnableFlag(impls.VBlankInterrupt),
 			),
 		),
 	)
