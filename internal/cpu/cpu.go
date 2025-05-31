@@ -38,6 +38,7 @@ type SM83 struct {
 	serialControl   byte  // SC, serial control register
 	bank            byte  // 0xFF50, used to disable BIOS
 	TMA             uint8 // Timer Modulo register, used for the timer
+	OAMDMA          byte  // Object Attribute Memory DMA register, used for sprite data transfer
 
 	r_A byte // A, accumulator register
 	r_F byte // F, flags register
@@ -148,6 +149,7 @@ func (c *SM83) Reset() {
 	c.memory.AddMMIOByte(&c.PPU.SCX, 0xFF43, false)
 	c.memory.AddMMIOByte(&c.PPU.LY, 0xFF44, true)
 	c.memory.AddMMIOByte(&c.PPU.LYC, 0xFF45, false)
+	c.memory.AddMMIOByte(&c.OAMDMA, 0xFF46, false)
 	c.memory.AddMMIOByte(&c.PPU.BGP, 0xFF47, false)
 	c.memory.AddMMIOByte(&c.PPU.OBP0, 0xFF48, false)
 	c.memory.AddMMIOByte(&c.PPU.OBP1, 0xFF49, false)
