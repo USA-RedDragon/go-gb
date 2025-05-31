@@ -378,6 +378,29 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 			c.r_H-- // Decrement H if L wraps around
 		}
 		cycles += 2
+	case 0x34: // INC (HL)
+		// Increment the value at address HL
+		addr := uint16(c.r_H)<<8 | uint16(c.r_L)
+		slog.Debug("Executing INC (HL)", "address", fmt.Sprintf("0x%04X", addr))
+		value, err := c.memory.Read8(addr)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read value from (HL): %v", err))
+		}
+		slog.Debug("Value before INC", "value", fmt.Sprintf("0x%02X", value))
+		value++
+		if value == 0x00 {
+			c.SetFlag(ZeroFlag, true)
+		} else {
+			c.SetFlag(ZeroFlag, false)
+		}
+		c.SetFlag(NegativeFlag, false)
+		c.SetFlag(HalfCarryFlag, (value&0x0F) == 0x00)
+		slog.Debug("Value after INC", "value", fmt.Sprintf("0x%02X", value))
+		err = c.memory.Write8(addr, value)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to write incremented value to (HL): %v", err))
+		}
+		cycles += 3
 	case 0x35: // DEC (HL)
 		// Decrement the value at address HL
 		addr := uint16(c.r_H)<<8 | uint16(c.r_L)
@@ -421,6 +444,10 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		c.SetFlag(CarryFlag, true)
 		c.SetFlag(NegativeFlag, false)
 		c.SetFlag(HalfCarryFlag, false)
+		cycles += 1
+	case 0x3C: // INC A
+		// Increment A and set flags accordingly
+		c.incRegister(&c.r_A)
 		cycles += 1
 	case 0x3D: // DEC A
 		c.decRegister(&c.r_A)
@@ -651,6 +678,23 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		c.SetFlag(HalfCarryFlag, (c.r_A&0x0F) < (hlValue&0x0F))
 		c.SetFlag(CarryFlag, c.r_A < hlValue)
 		cycles += 2
+	case 0xC0: // RET NZ
+		// Return from subroutine if Z flag is not set
+		slog.Debug("Executing RET NZ")
+		if !c.GetFlag(ZeroFlag) {
+			addr, err := c.memory.Read16(c.r_SP)
+			if err != nil {
+				panic(fmt.Sprintf("Failed to read return address from stack: %v", err))
+			}
+			slog.Debug("Popped return address from stack", "address", fmt.Sprintf("0x%04X", addr))
+			c.r_SP += 2
+			c.r_PC = addr
+			slog.Debug("Jumping to new PC", "new_PC", fmt.Sprintf("0x%04X", c.r_PC))
+			cycles += 5
+		} else {
+			slog.Debug("Not returning, Z flag is set")
+			cycles += 2
+		}
 	case 0xC1: // POP BC
 		c.pop16(&c.r_B, &c.r_C)
 		slog.Debug("Executing POP BC")
@@ -744,6 +788,18 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 	case 0xD5: // PUSH DE
 		c.push16(&c.r_D, &c.r_E)
 		slog.Debug("Executing PUSH DE", "value", fmt.Sprintf("0x%04X", uint16(c.r_D)<<8|uint16(c.r_E)))
+		cycles += 4
+	case 0xD9: // RETI
+		// Return from interrupt
+		slog.Debug("Executing RETI")
+		addr, err := c.memory.Read16(c.r_SP)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to read return address from stack for RETI: %v", err))
+		}
+		slog.Debug("Popped return address from stack", "address", fmt.Sprintf("0x%04X", addr))
+		c.r_SP += 2
+		c.r_PC = addr
+		c.ime = true
 		cycles += 4
 	case 0xE0: // LDH (n),A
 		// Load the value of A into the address 0xFF00 + n
