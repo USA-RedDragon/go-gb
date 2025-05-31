@@ -159,12 +159,18 @@ func (c *SM83) execute(instruction byte) (cycles int) {
 		cycles += 2
 	case 0x17: // RLA
 		// Rotate A left
+		previousCarry := c.GetFlag(CarryFlag)
 		topBit := c.r_A & 0x80 // Get the top bit (7th bit) of A
 		c.r_A = (c.r_A << 1)
 		if topBit != 0 {
 			c.SetFlag(CarryFlag, true) // Set carry flag if the top bit was 1
 		} else {
 			c.SetFlag(CarryFlag, false) // Clear carry flag if the top bit was 0
+		}
+		if previousCarry {
+			c.r_A |= 0x01 // Set LSB if previous carry was set
+		} else {
+			c.r_A &= 0xFE // Clear LSB if previous carry was not set
 		}
 		c.SetFlag(ZeroFlag, false)
 		c.SetFlag(NegativeFlag, false)
