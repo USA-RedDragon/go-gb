@@ -136,6 +136,12 @@ func (ppu *PPU) Step() {
 		slog.Error("PPU: BG/Window Tile Data Select is set to 1, this is not supported in DMG mode")
 	}
 
+	if ppu.LYC == ppu.LY {
+		ppu.LCDStatus |= 1 << 2 // Set the LYC=LY flag
+	} else {
+		ppu.LCDStatus &^= 1 << 2 // Clear the LYC=LY flag
+	}
+
 	switch ppu.state {
 	case ppuStateOAMSearch:
 		// TODO: find sprites
