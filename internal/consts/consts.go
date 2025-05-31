@@ -10,4 +10,5 @@ const (
 	BIOSSize             = 256   // 256 bytes of BIOS (0x0000 - 0x00FF)
 	ProhibitedSize       = 96    // 96 bytes of prohibited memory (0xFEA0 - 0xFEFF)
 	OAMSize              = 160   // 160 bytes of OAM (0xFE00 - 0xFE9F)
+	FrameBufferSize      = 23040 // 23040 bytes for a single frame buffer (160x144 pixels)
 )

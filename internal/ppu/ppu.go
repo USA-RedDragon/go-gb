@@ -51,8 +51,8 @@ type PPU struct {
 	Fetcher    *Fetcher              // Fetcher for pixel data
 
 	HaveFrame     bool
-	FrameBuffer_A []byte
-	FrameBuffer_B []byte // Frame buffer for double buffering
+	FrameBuffer_A [consts.FrameBufferSize]byte
+	FrameBuffer_B [consts.FrameBufferSize]byte // Frame buffer for double buffering
 
 	state    ppuState // Current state of the PPU
 	ticks    uint16
@@ -67,7 +67,7 @@ func NewPPU() *PPU {
 	return ppu
 }
 
-func (ppu *PPU) GetFrame() []byte {
+func (ppu *PPU) GetFrame() [consts.FrameBufferSize]byte {
 	ppu.HaveFrame = false
 	return ppu.FrameBuffer_B
 }
@@ -160,7 +160,8 @@ func (ppu *PPU) Step() {
 			break
 		}
 
-		ppu.FrameBuffer_A = append(ppu.FrameBuffer_A, ppu.GetPalleteColor(pixelIdx))
+		fbOffset := (uint16(ppu.LY) * 160) + uint16(ppu.x)
+		ppu.FrameBuffer_A[fbOffset] = ppu.GetPalleteColor(pixelIdx)
 
 		ppu.x++
 		if ppu.x == 160 {
@@ -175,7 +176,7 @@ func (ppu *PPU) Step() {
 			if ppu.LY == 144 {
 				slog.Debug("PPU: VBlank started", "LY", ppu.LY, "ticks", ppu.ticks)
 				ppu.FrameBuffer_B = ppu.FrameBuffer_A
-				ppu.FrameBuffer_A = []byte{} // Clear the A buffer for the next frame
+				ppu.FrameBuffer_A = [consts.FrameBufferSize]byte{}
 				ppu.HaveFrame = true
 				ppu.state = ppuStateVBlank
 			} else {

@@ -1,6 +1,7 @@
 package cpu
 
 import (
+	"bytes"
 	"fmt"
 	"log/slog"
 	"os"
@@ -103,13 +104,13 @@ func (c *SM83) Reset() {
 		if c.cartridge != nil {
 			c.memory.AddMMIO(c.cartridge.ROMBank0[consts.BIOSSize:], 0x0100, consts.ROMBankSize-consts.BIOSSize, true)
 		} else {
-			c.memory.AddMMIO(make([]byte, consts.ROMBankSize-consts.BIOSSize)[:], 0x0100, consts.ROMBankSize-consts.BIOSSize, true)
+			c.memory.AddMMIO(bytes.Repeat([]byte{0xff}, consts.ROMBankSize-consts.BIOSSize)[:], 0x0100, consts.ROMBankSize-consts.BIOSSize, true)
 		}
 	} else {
 		if c.cartridge != nil {
 			c.memory.AddMMIO(c.cartridge.ROMBank0[:], 0x0, consts.ROMBankSize, true)
 		} else {
-			c.memory.AddMMIO(make([]byte, consts.ROMBankSize)[:], 0x0, consts.ROMBankSize, true)
+			c.memory.AddMMIO(bytes.Repeat([]byte{0xff}, consts.ROMBankSize)[:], 0x0, consts.ROMBankSize, true)
 		}
 	}
 	if c.cartridge != nil && len(c.cartridge.AdditionalROMBanks) > 0 {
@@ -197,11 +198,10 @@ func (c *SM83) Step() int {
 	if !c.halted {
 		instruction := c.fetch()
 
-		slog.Debug("Instruction", "instruction", fmt.Sprintf("0x%02X", instruction))
-		slog.Debug(c.DebugRegisters())
-
-		for range 4 {
-			c.PPU.Step()
+		// c.DebugRegisters() is expensive in the hot path
+		if c.config.LogLevel == config.LogLevelDebug {
+			slog.Debug("Instruction", "instruction", fmt.Sprintf("0x%02X", instruction))
+			slog.Debug(c.DebugRegisters())
 		}
 
 		preBank := c.bank
@@ -274,7 +274,7 @@ func (c *SM83) DebugRegisters() string {
 	return ret
 }
 
-func (c *SM83) RunUntilFrame() []byte {
+func (c *SM83) RunUntilFrame() [23040]byte {
 	cycleTime := time.Second / 4194304 / 4 // 4.194304 MHz, divided by 4 (1.048576 MHz) to count machine cycles
 	for !c.PPU.HaveFrame {
 		prevTime := time.Now()
@@ -299,10 +299,6 @@ func (c *SM83) Run() {
 		prevTime := time.Now()
 		cycles := c.Step()
 		for range cycles {
-			c.PPU.Step()
-			c.PPU.Step()
-			c.PPU.Step()
-			c.PPU.Step()
 			time.Sleep(cycleTime - time.Since(prevTime))
 			prevTime = time.Now()
 		}
