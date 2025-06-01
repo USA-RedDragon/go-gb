@@ -156,3 +156,83 @@ func pushRegisterPair(c *SM83, srcTop *byte, srcBottom *byte) {
 	}
 	c.rSP -= 2 // Decrement stack pointer
 }
+
+func ldMemRegisterRegister(c *SM83, addrRegister *byte, src *byte) {
+	addr := 0xFF00 + uint16(*addrRegister)
+	err := c.memory.Write8(addr, *src)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func ldRegisterMemRegister(c *SM83, dst *byte, addrRegister *byte) {
+	addr := 0xFF00 + uint16(*addrRegister)
+	var err error
+	*dst, err = c.memory.Read8(addr)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func ld16ImmMemRegister(c *SM83, dst *byte) {
+	addr, err := c.memory.Read16(c.rPC)
+	if err != nil {
+		panic(err)
+	}
+	c.rPC += 2
+	value, err := c.memory.Read8(addr)
+	if err != nil {
+		panic(err)
+	}
+	*dst = value
+}
+
+func ldh8ImmMemRegister(c *SM83, src *byte) {
+	// Read the immediate value from the memory
+	value, err := c.memory.Read8(c.rPC)
+	if err != nil {
+		panic(err)
+	}
+	c.rPC++
+
+	// The address is always 0xFF00 + value
+	addr := 0xFF00 + uint16(value)
+
+	err = c.memory.Write8(addr, *src)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func ldhRegisterMemImm(c *SM83, dst *byte) {
+	// Read the immediate value from the memory
+	value, err := c.memory.Read8(c.rPC)
+	if err != nil {
+		panic(err)
+	}
+	c.rPC++
+
+	// The address is always 0xFF00 + value
+	addr := 0xFF00 + uint16(value)
+
+	// Read the value from the memory at the specified address
+	*dst, err = c.memory.Read8(addr)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func ldRegisterMem16Imm(c *SM83, dst *byte) {
+	// Read the immediate value from the memory
+	addr, err := c.memory.Read16(c.rPC)
+	if err != nil {
+		panic(err)
+	}
+	c.rPC += 2
+
+	// Read the value from the memory at the specified address
+	*dst, err = c.memory.Read8(addr)
+	if err != nil {
+		panic(err)
+	}
+}

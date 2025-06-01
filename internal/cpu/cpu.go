@@ -254,8 +254,8 @@ func (c *SM83) Step() int {
 
 		// c.DebugRegisters() is expensive in the hot path
 		if c.config.LogLevel == config.LogLevelDebug {
-			slog.Debug("Instruction", "instruction", fmt.Sprintf("0x%02X", instruction))
 			slog.Debug(c.DebugRegisters())
+			slog.Debug("Instruction", "instruction", instruction)
 		}
 
 		if instruction == nil {

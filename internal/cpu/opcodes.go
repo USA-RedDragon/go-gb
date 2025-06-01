@@ -252,9 +252,9 @@ var opcodes = []*OpCode{
 	// 0xDD ????
 	// 0xDE: {Name: "SBC A,n", Len: 2, Cycles: 2, Exec: func(c *SM83) { sbcImmediate(c, &c.r_A) }},
 	0xDF: {Name: "RST 18H", Len: 1, Cycles: 4, Exec: func(c *SM83) { rst(c, 0x18) }},
-	// 0xE0: {Name: "LDH (n),A", Len: 2, Cycles: 3, Exec: func(c *SM83) { ldhImmediate(c, &c.r_A) }},
+	0xE0: {Name: "LDH (n),A", Len: 2, Cycles: 3, Exec: func(c *SM83) { ldh8ImmMemRegister(c, &c.rA) }},
 	0xE1: {Name: "POP HL", Len: 1, Cycles: 3, Exec: func(c *SM83) { popRegisterPair(c, &c.rH, &c.rL) }},
-	0xE2: {Name: "LD (C),A", Len: 1, Cycles: 2, Exec: func(c *SM83) { ldMemCombRegister(c, &c.rC, nil, &c.rA) }},
+	0xE2: {Name: "LD (C),A", Len: 1, Cycles: 2, Exec: func(c *SM83) { ldMemRegisterRegister(c, &c.rC, &c.rA) }},
 	// 0xE3 ????
 	// 0xE4 ????
 	0xE5: {Name: "PUSH HL", Len: 1, Cycles: 4, Exec: func(c *SM83) { pushRegisterPair(c, &c.rH, &c.rL) }},
@@ -262,15 +262,15 @@ var opcodes = []*OpCode{
 	0xE7: {Name: "RST 20H", Len: 1, Cycles: 4, Exec: func(c *SM83) { rst(c, 0x20) }},
 	0xE8: {Name: "ADD SP,n", Len: 2, Cycles: 4, Exec: func(c *SM83) { addSPImmediate(c) }},
 	0xE9: {Name: "JP (HL)", Len: 1, Cycles: 1, Exec: func(c *SM83) { jpMemComb(c, &c.rH, &c.rL) }},
-	0xEA: {Name: "LD (nn),A", Len: 3, Cycles: 4, Exec: func(c *SM83) { ldMemCombRegister(c, &c.rH, &c.rL, &c.rA) }},
+	0xEA: {Name: "LD (nn),A", Len: 3, Cycles: 4, Exec: func(c *SM83) { ld16ImmMemRegister(c, &c.rA) }},
 	// 0xEB ????
 	// 0xEC ????
 	// 0xED ????
 	0xEE: {Name: "XOR n", Len: 2, Cycles: 2, Exec: func(c *SM83) { xorImmediate(c, &c.rA) }},
 	0xEF: {Name: "RST 28H", Len: 1, Cycles: 4, Exec: func(c *SM83) { rst(c, 0x28) }},
-	// 0xF0: {Name: "LDH A,(n)", Len: 2, Cycles: 3, Exec: func(c *SM83) { ldhImmediateRead(c, &c.r_A) }},
+	0xF0: {Name: "LDH A,(n)", Len: 2, Cycles: 3, Exec: func(c *SM83) { ldhRegisterMemImm(c, &c.rA) }},
 	0xF1: {Name: "POP AF", Len: 1, Cycles: 3, Exec: func(c *SM83) { popRegisterPair(c, &c.rA, &c.rF) }},
-	// 0xF2: {Name: "LD A,(C)", Len: 1, Cycles: 2, Exec: func(c *SM83) { ldRegisterMemComb(c, &c.r_A, &c.r_C) }},
+	0xF2: {Name: "LD A,(C)", Len: 1, Cycles: 2, Exec: func(c *SM83) { ldRegisterMemRegister(c, &c.rA, &c.rC) }},
 	0xF3: {Name: "DI", Len: 1, Cycles: 1, Exec: func(c *SM83) { c.ime = false }},
 	// 0xF4 ????
 	0xF5: {Name: "PUSH AF", Len: 1, Cycles: 4, Exec: func(c *SM83) { pushRegisterPair(c, &c.rA, &c.rF) }},
@@ -278,7 +278,7 @@ var opcodes = []*OpCode{
 	0xF7: {Name: "RST 30H", Len: 1, Cycles: 4, Exec: func(c *SM83) { rst(c, 0x30) }},
 	// 0xF8: {Name: "LD HL,SP+n", Len: 2, Cycles: 3, Exec: func(c *SM83) { ldHLSPImmediate(c) }},
 	0xF9: {Name: "LD SP,HL", Len: 1, Cycles: 2, Exec: func(c *SM83) { ld16RegCombRegister(c, &c.rSP, &c.rH, &c.rL) }},
-	0xFA: {Name: "LD A,(nn)", Len: 3, Cycles: 4, Exec: func(c *SM83) { ldRegisterMemComb(c, &c.rA, &c.rH, &c.rL) }},
+	0xFA: {Name: "LD A,(nn)", Len: 3, Cycles: 4, Exec: func(c *SM83) { ldRegisterMem16Imm(c, &c.rA) }},
 	0xFB: {Name: "EI", Len: 1, Cycles: 1, Exec: func(c *SM83) { c.ime = true }},
 	// 0xFC ????
 	// 0xFD ????

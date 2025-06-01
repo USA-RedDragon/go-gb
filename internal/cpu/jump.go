@@ -6,25 +6,17 @@ func jr(cpu *SM83) {
 		panic(err)
 	}
 	cpu.rPC++
-	if offset&0x80 != 0 {
-		offset = -((^offset + 1) & 0xFF) // Convert to signed
-	}
-	cpu.rPC += uint16(offset)
+	cpu.rPC += uint16(int8(offset))
 }
 
 func jrCond(cpu *SM83, condition bool) {
+	offset, err := cpu.memory.Read8(cpu.rPC)
+	if err != nil {
+		panic(err)
+	}
+	cpu.rPC++
 	if condition {
-		offset, err := cpu.memory.Read8(cpu.rPC)
-		if err != nil {
-			panic(err)
-		}
-		cpu.rPC++
-		if offset&0x80 != 0 {
-			offset = -((^offset + 1) & 0xFF) // Convert to signed
-		}
-		cpu.rPC += uint16(offset)
-	} else {
-		cpu.rPC++ // Just skip the offset
+		cpu.rPC += uint16(int8(offset))
 	}
 }
 
