@@ -387,3 +387,105 @@ func orImmediate(cpu *SM83, dst *byte) {
 	cpu.SetFlag(HalfCarryFlag, false)
 	cpu.SetFlag(CarryFlag, false)
 }
+
+func sbcRegister(cpu *SM83, dst *byte, src *byte) {
+	carry := byte(0)
+	if cpu.GetFlag(CarryFlag) {
+		carry = 1
+	}
+	result := uint16(*dst) - uint16(*src) - uint16(carry)
+	cpu.SetFlag(ZeroFlag, result&0xFF == 0)
+	cpu.SetFlag(NegativeFlag, true)
+	cpu.SetFlag(HalfCarryFlag, ((*dst&0x0F)-(*src&0x0F)-carry) < 0)
+	cpu.SetFlag(CarryFlag, result > 0xFF)
+	*dst = byte(result & 0xFF)
+}
+
+func adcRegister(cpu *SM83, dst *byte, src *byte) {
+	carry := byte(0)
+	if cpu.GetFlag(CarryFlag) {
+		carry = 1
+	}
+	result := uint16(*dst) + uint16(*src) + uint16(carry)
+	cpu.SetFlag(ZeroFlag, result&0xFF == 0)
+	cpu.SetFlag(NegativeFlag, false)
+	cpu.SetFlag(HalfCarryFlag, ((*dst&0x0F)+(*src&0x0F)+carry) > 0x0F)
+	cpu.SetFlag(CarryFlag, result > 0xFF)
+	*dst = byte(result & 0xFF)
+}
+
+func sbcMemComb(cpu *SM83, dst *byte, addrTop *byte, addrBottom *byte) {
+	addr := uint16(*addrTop)<<8 | uint16(*addrBottom)
+	value, err := cpu.memory.Read8(addr)
+	if err != nil {
+		panic(err)
+	}
+
+	carry := byte(0)
+	if cpu.GetFlag(CarryFlag) {
+		carry = 1
+	}
+	result := uint16(*dst) - uint16(value) - uint16(carry)
+	cpu.SetFlag(ZeroFlag, result&0xFF == 0)
+	cpu.SetFlag(NegativeFlag, true)
+	cpu.SetFlag(HalfCarryFlag, ((*dst&0x0F)-value&0x0F-carry) < 0)
+	cpu.SetFlag(CarryFlag, result > 0xFF)
+	*dst = byte(result & 0xFF)
+}
+
+func adcMemComb(cpu *SM83, dst *byte, addrTop *byte, addrBottom *byte) {
+	addr := uint16(*addrTop)<<8 | uint16(*addrBottom)
+	value, err := cpu.memory.Read8(addr)
+	if err != nil {
+		panic(err)
+	}
+
+	carry := byte(0)
+	if cpu.GetFlag(CarryFlag) {
+		carry = 1
+	}
+	result := uint16(*dst) + uint16(value) + uint16(carry)
+	cpu.SetFlag(ZeroFlag, result&0xFF == 0)
+	cpu.SetFlag(NegativeFlag, false)
+	cpu.SetFlag(HalfCarryFlag, ((*dst&0x0F)+(value&0x0F)+carry) > 0x0F)
+	cpu.SetFlag(CarryFlag, result > 0xFF)
+	*dst = byte(result & 0xFF)
+}
+
+func adcImmediate(cpu *SM83, dst *byte) {
+	value, err := cpu.memory.Read8(cpu.rPC)
+	if err != nil {
+		panic(err)
+	}
+	cpu.rPC++ // Increment program counter
+
+	carry := byte(0)
+	if cpu.GetFlag(CarryFlag) {
+		carry = 1
+	}
+	result := uint16(*dst) + uint16(value) + uint16(carry)
+	cpu.SetFlag(ZeroFlag, result&0xFF == 0)
+	cpu.SetFlag(NegativeFlag, false)
+	cpu.SetFlag(HalfCarryFlag, ((*dst&0x0F)+(value&0x0F)+carry) > 0x0F)
+	cpu.SetFlag(CarryFlag, result > 0xFF)
+	*dst = byte(result & 0xFF)
+}
+
+func sbcImmediate(cpu *SM83, dst *byte) {
+	value, err := cpu.memory.Read8(cpu.rPC)
+	if err != nil {
+		panic(err)
+	}
+	cpu.rPC++ // Increment program counter
+
+	carry := byte(0)
+	if cpu.GetFlag(CarryFlag) {
+		carry = 1
+	}
+	result := uint16(*dst) - uint16(value) - uint16(carry)
+	cpu.SetFlag(ZeroFlag, result&0xFF == 0)
+	cpu.SetFlag(NegativeFlag, true)
+	cpu.SetFlag(HalfCarryFlag, ((*dst&0x0F)-value&0x0F-carry) < 0)
+	cpu.SetFlag(CarryFlag, result > 0xFF)
+	*dst = byte(result & 0xFF)
+}
