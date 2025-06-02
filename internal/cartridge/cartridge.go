@@ -216,11 +216,11 @@ func NewCartridge(romPath string) (*Cartridge, error) {
 		c.CartridgeRAMBanks = [][]byte{}
 	}
 
-	c.OldPublisher = OldPublisher(romData[0x014B])
-	c.Publisher = c.OldPublisher.String()
-	if c.OldPublisher == OldPublisherSeeOther {
-		c.NewPublisher = NewPublisher(string([]byte{c.ROMBank0[0x0144], c.ROMBank0[0x0145]}))
-		c.Publisher = c.NewPublisher.String()
+	oldPubCode := romData[0x014B]
+	if oldPubCode == 0x33 {
+		c.Publisher = GetNewPublisher(string([]byte{romData[0x0144], romData[0x0145]}))
+	} else {
+		c.Publisher = GetPublisher(oldPubCode)
 	}
 
 	c.Title = c.getTitle()
