@@ -146,15 +146,17 @@ func popRegisterPair(c *SM83, dstTop *byte, dstBottom *byte) {
 }
 
 func pushRegisterPair(c *SM83, srcTop *byte, srcBottom *byte) {
-	// Combine the two registers into a single 16-bit value
-	addr := uint16(*srcTop)<<8 | uint16(*srcBottom)
-
 	// Write the value to the stack
-	err := c.memory.Write16(c.rSP-2, addr)
+	err := c.memory.Write8(c.rSP-1, *srcTop)
 	if err != nil {
 		panic(err)
 	}
-	c.rSP -= 2 // Decrement stack pointer
+	c.rSP -= 1
+	err = c.memory.Write8(c.rSP-1, *srcBottom)
+	if err != nil {
+		panic(err)
+	}
+	c.rSP -= 1
 }
 
 func ldMemRegisterRegister(c *SM83, addrRegister *byte, src *byte) {
