@@ -122,6 +122,8 @@ func (c *SM83) Reset() {
 	c.memory.AddMMIO(c.PPU.VRAM[:], 0x8000, consts.VRAMSize, false)
 	if c.cartridge != nil && c.cartridge.RAMSize.Bytes() > 0 {
 		c.memory.AddMMIO(c.cartridge.CartridgeRAMBanks[0], 0xA000, consts.CartridgeRAMBankSize, false)
+	} else {
+		c.memory.AddMMIO(bytes.Repeat([]byte{0xff}, consts.CartridgeRAMBankSize), 0xA000, consts.CartridgeRAMBankSize, false)
 	}
 	c.memory.AddMMIO(c.RAM[:], 0xC000, consts.RAMSize, false)
 	c.memory.AddMMIO(c.PPU.OAM[:], 0xFE00, consts.OAMSize, false)
