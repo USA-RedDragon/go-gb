@@ -27,6 +27,7 @@ func (o *OpCode) String() string {
 	)
 }
 
+//nolint:gochecknoglobals
 var opcodes = []*OpCode{
 	0x00: {Name: "NOP", Len: 1, Cycles: 1, Exec: func(_ *SM83) {}},
 	0x01: {Name: "LD BC,nn", Len: 3, Cycles: 3, Exec: func(c *SM83) { ldCombRegister16Imm(c, &c.rB, &c.rC) }},
@@ -286,6 +287,7 @@ var opcodes = []*OpCode{
 	0xFF: {Name: "RST 38H", Len: 1, Cycles: 4, Exec: func(c *SM83) { rst(c, 0x38) }},
 }
 
+//nolint:gochecknoglobals
 var cbOpcodes = []*OpCode{
 	// 0x00: {Name: "RLC B", Len: 1, Cycles: 2, Exec: func(c *SM83) { rlcRegister(c, &c.r_B) }},
 	0x11: {Name: "RL C", Len: 1, Cycles: 2, Exec: func(c *SM83) { rlRegister(c, &c.rC) }},

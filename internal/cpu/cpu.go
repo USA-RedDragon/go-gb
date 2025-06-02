@@ -207,21 +207,24 @@ func (c *SM83) Step() int {
 		if c.ime && c.interruptFlag != 0 {
 			// Handle interrupts if IME is set and there are pending interrupts
 			var interrupt impls.Interrupt
-			if c.GetInterruptEnableFlag(impls.JoypadInterrupt) && c.GetInterruptFlag(impls.JoypadInterrupt) {
+			switch {
+			case c.GetInterruptEnableFlag(impls.JoypadInterrupt) && c.GetInterruptFlag(impls.JoypadInterrupt):
 				slog.Info("Joypad interrupt triggered")
 				interrupt = impls.JoypadInterrupt
-			} else if c.GetInterruptEnableFlag(impls.SerialInterrupt) && c.GetInterruptFlag(impls.SerialInterrupt) {
+			case c.GetInterruptEnableFlag(impls.SerialInterrupt) && c.GetInterruptFlag(impls.SerialInterrupt):
 				slog.Info("Serial interrupt triggered")
 				interrupt = impls.SerialInterrupt
-			} else if c.GetInterruptEnableFlag(impls.TimerInterrupt) && c.GetInterruptFlag(impls.TimerInterrupt) {
+			case c.GetInterruptEnableFlag(impls.TimerInterrupt) && c.GetInterruptFlag(impls.TimerInterrupt):
 				slog.Info("Timer interrupt triggered")
 				interrupt = impls.TimerInterrupt
-			} else if c.GetInterruptEnableFlag(impls.LCDInterrupt) && c.GetInterruptFlag(impls.LCDInterrupt) {
+			case c.GetInterruptEnableFlag(impls.LCDInterrupt) && c.GetInterruptFlag(impls.LCDInterrupt):
 				slog.Info("LCD interrupt triggered")
 				interrupt = impls.LCDInterrupt
-			} else if c.GetInterruptEnableFlag(impls.VBlankInterrupt) && c.GetInterruptFlag(impls.VBlankInterrupt) {
+			case c.GetInterruptEnableFlag(impls.VBlankInterrupt) && c.GetInterruptFlag(impls.VBlankInterrupt):
 				slog.Info("VBlank interrupt triggered")
 				interrupt = impls.VBlankInterrupt
+			default:
+				slog.Debug("No interrupt triggered")
 			}
 
 			if interrupt != 0 {

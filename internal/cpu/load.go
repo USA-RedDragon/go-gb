@@ -151,12 +151,12 @@ func pushRegisterPair(c *SM83, srcTop *byte, srcBottom *byte) {
 	if err != nil {
 		panic(err)
 	}
-	c.rSP -= 1
+	c.rSP--
 	err = c.memory.Write8(c.rSP-1, *srcBottom)
 	if err != nil {
 		panic(err)
 	}
-	c.rSP -= 1
+	c.rSP--
 }
 
 func ldMemRegisterRegister(c *SM83, addrRegister *byte, src *byte) {

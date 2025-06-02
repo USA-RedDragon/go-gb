@@ -70,7 +70,13 @@ func runInteractive(cmd *cobra.Command, _ []string) error {
 	fmt.Println("Interactive mode started. Press Enter to step through the CPU instructions. Type exit or quit to exit.")
 	for {
 		var input string
-		fmt.Scanln(&input) // Wait for user input
+		_, err = fmt.Scanln(&input) // Wait for user input
+		if err != nil {
+			if err.Error() != "unexpected newline" {
+				return fmt.Errorf("failed to read input: %w", err)
+			}
+		}
+		input = strings.TrimSpace(input)
 		if input == "exit" || input == "quit" {
 			break
 		}

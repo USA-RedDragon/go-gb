@@ -82,11 +82,12 @@ func runRoot(cmd *cobra.Command, _ []string) error {
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetFullscreen(cfg.Fullscreen)
 	ebiten.SetScreenClearedEveryFrame(true)
-	if cart != nil && cart.Title != "" {
+	switch {
+	case cart != nil && cart.Title != "":
 		ebiten.SetWindowTitle(fmt.Sprintf("%s (v%d) - %s [%s] | go-gb", cart.Title, cart.Version, cart.Publisher, cart.CartridgeType))
-	} else if cart != nil && cart.Title == "" {
+	case cart != nil && cart.Title == "":
 		ebiten.SetWindowTitle(fmt.Sprintf("%s [%s] | go-gb", filepath.Base(cfg.ROM), cart.CartridgeType))
-	} else {
+	default:
 		ebiten.SetWindowTitle("go-gb")
 	}
 
