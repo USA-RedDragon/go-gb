@@ -24,7 +24,7 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - run: CGO_ENABLED=0 go test -run ^$ -benchmem -bench=. ./...
+      - run: CGO_ENABLED=1 go test -run ^$ -benchmem -bench=. ./...
 
   race-tests:
     if: github.event_name != 'push' && github.ref != 'refs/heads/main'
