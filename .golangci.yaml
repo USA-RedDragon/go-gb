@@ -1,12 +1,9 @@
-run:
-  timeout: 30m
-
+version: "2"
 linters:
   enable:
     - asasalint
     - asciicheck
     - bidichk
-    - copyloopvar
     - containedctx
     - contextcheck
     - decorder
@@ -18,7 +15,6 @@ linters:
     - errorlint
     - exhaustive
     - forcetypeassert
-    - gci
     - gocheckcompilerdirectives
     - gochecknoglobals
     - gochecknoinits
@@ -26,7 +22,6 @@ linters:
     - gocritic
     - gocyclo
     - godox
-    - gofmt
     - goheader
     - gomoddirectives
     - gosec
@@ -46,3 +41,24 @@ linters:
     - usestdlibvars
     - wastedassign
     - whitespace
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - gofmt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
