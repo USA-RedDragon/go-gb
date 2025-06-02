@@ -18,7 +18,7 @@ jobs:
       - name: Install X11
         run: |
           sudo apt-get update
-          sudo apt-get install -y libx11-dev libxrandr-dev libglx-dev
+          sudo apt-get install -y libx11-dev libxrandr-dev libglx-dev libgl-dev
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
