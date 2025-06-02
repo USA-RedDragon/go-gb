@@ -172,6 +172,7 @@ func (c *SM83) Reset() {
 		c.rH = 0
 		c.rL = 0
 		c.rPC = 0x0
+		c.rSP = 0x0
 	} else {
 		c.ime = false
 		c.rA = 0x01
@@ -187,8 +188,8 @@ func (c *SM83) Reset() {
 		c.rH = 0x01
 		c.rL = 0x4D
 		c.rPC = 0x0100 // Program Counter starts at 0x0100
+		c.rSP = 0xFFFE // Stack Pointer starts at 0xFFFE
 	}
-	c.rSP = 0xFFFE
 	c.halted = false
 	c.exit = false
 }
