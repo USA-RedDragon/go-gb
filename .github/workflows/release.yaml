@@ -16,5 +16,9 @@ jobs:
       contents: write
       packages: write
     uses: USA-RedDragon/reusable-actions/.github/workflows/goreleaser.yaml@v2.0.4
+    with:
+      run-before: |
+        sudo apt-get update
+        sudo apt-get install -y libx11-dev libxrandr-dev libglx-dev libgl-dev libxcursor-dev libxinerama-dev libxi-dev
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
