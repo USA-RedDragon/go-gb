@@ -176,17 +176,16 @@ func ldRegisterMemRegister(c *SM83, dst *byte, addrRegister *byte) {
 	}
 }
 
-func ld16ImmMemRegister(c *SM83, dst *byte) {
+func ld16ImmMemRegister(c *SM83, src *byte) {
 	addr, err := c.memory.Read16(c.rPC)
 	if err != nil {
 		panic(err)
 	}
 	c.rPC += 2
-	value, err := c.memory.Read8(addr)
+	err = c.memory.Write8(addr, *src)
 	if err != nil {
 		panic(err)
 	}
-	*dst = value
 }
 
 func ldh8ImmMemRegister(c *SM83, src *byte) {
