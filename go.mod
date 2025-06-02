@@ -5,9 +5,9 @@ go 1.24.3
 require (
 	github.com/USA-RedDragon/configulator v0.0.0-20250409213831-8d29f1f162be
 	github.com/hajimehoshi/ebiten/v2 v2.8.8
-	github.com/lmittmann/tint v1.0.7
+	github.com/lmittmann/tint v1.1.1
 	github.com/spf13/cobra v1.9.1
-	golang.org/x/image v0.20.0
+	golang.org/x/image v0.27.0
 )
 
 require (
