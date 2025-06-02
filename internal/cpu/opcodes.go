@@ -301,7 +301,12 @@ func cbPrefix(c *SM83) {
 		panic(fmt.Sprintf("Failed to read CB-prefixed instruction: %v", err))
 	}
 	c.rPC++
-	cbOpcodes[instruction].Exec(c)
+	inst := cbOpcodes[instruction]
+	if inst != nil {
+		inst.Exec(c)
+	} else {
+		panic(fmt.Sprintf("Unknown CB-prefixed instruction: 0x%02X", instruction))
+	}
 }
 
 // func (c *SM83) execute(instruction byte) (cycles int) {
